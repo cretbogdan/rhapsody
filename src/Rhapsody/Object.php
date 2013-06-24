@@ -16,9 +16,9 @@ class Object
     public function save()
     {
         if (isset($this->id)) {
-            Rhapsody::getConnection()->update($this->table, $data, array('id' => $this->id));
+            Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->id));
         } else {
-            Rhapsody::getConnection()->insert($this->table, $data);
+            Rhapsody::getConnection()->insert($this->table, $this->data);
         };
     }
 
