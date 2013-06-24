@@ -1,0 +1,7 @@
+{
+    "name": "cretbogdan/rhapsody-orm",
+    "require": {
+        "php": ">=5.3.3",
+        "doctrine/dbal": "2.3.*"
+    }
+}
