@@ -10,7 +10,7 @@ class Query
     private $orders = array();
     private $queryBuilder;
 
-    public function __construct($table = null)
+    protected function __construct($table = null)
     {
         if ($table) {
             $this->table = $table;
@@ -19,7 +19,9 @@ class Query
 
     public static function create($table = null)
     {
-        return new static($table);
+        $class = Rhapsody::getQueryClass($table);
+
+        return new $class($table);
     }
 
     public function orderBy($column, $type = 'asc')

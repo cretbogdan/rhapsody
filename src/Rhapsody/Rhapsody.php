@@ -69,6 +69,21 @@ class Rhapsody
         }
     }
 
+    public function getQueryClass($table)
+    {
+        if (self::$modelFormatter) {
+            $class = self::$modelFormatter.'\\'.ucfirst($table.'Query');
+
+            if (class_exists($class)) {
+                return $class;
+            } else {
+                return '\Rhapsody\Query';
+            }
+        } else {
+            return '\Rhapsody\Query';
+        }
+    }
+
     private static function getDefaultObjectClass()
     {
         return '\Rhapsody\Object';
