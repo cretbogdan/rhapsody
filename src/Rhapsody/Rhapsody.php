@@ -8,11 +8,12 @@ class Rhapsody
     private static $modelFormatter;
 
     /**
-     * Setup connection
+     * Setup connection.
+     * Accepts a Doctrine connection
      *
      * @param  array $parameters Connection parameters
-     *
      *                  array(
+     *                      'doctrine_connection' => $conn,
      *                      'dbname' => 'mydb',
      *                      'user' => 'user',
      *                      'password' => 'secret',
@@ -22,8 +23,12 @@ class Rhapsody
      */
     public static function setup($parameters)
     {
-        $config = new \Doctrine\DBAL\Configuration();
-        self::$conn = \Doctrine\DBAL\DriverManager::getConnection($parameters, $config);
+        if (isset($parameters['doctrine_connection'])) {
+            self::$conn = $parameters['doctrine_connection'];
+        } else {
+            $config = new \Doctrine\DBAL\Configuration();
+            self::$conn = \Doctrine\DBAL\DriverManager::getConnection($parameters, $config);
+        }
     }
 
 
@@ -34,24 +39,38 @@ class Rhapsody
 
     public static function createObject($table, array $data = array())
     {
-        $object = null;
+        $class = self::getObjectClass($table);
 
-        if (self::$modelFormatter) {
-            $class = self::$modelFormatter.'\\'.ucfirst($table);
-            if (class_exists($class)) {
-                $object = new $class($table, $data);
-            } else {
-                $object = new Oject($table, $data);
-            }
-        } else {
-            $object = new Oject($table, $data);
-        }
+        return new $class($table, $data);
+    }
 
-        return $object;
+    public static function createQueryBuilder()
+    {
+        return self::getConnection()->createQueryBuilder();
     }
 
     public static function getConnection()
     {
         return self::$conn;
+    }
+
+    public static function getObjectClass($table)
+    {
+        if (self::$modelFormatter) {
+            $class = self::$modelFormatter.'\\'.ucfirst($table);
+
+            if (class_exists($class)) {
+                return $class;
+            } else {
+                return self::getDefaultObjectClass();
+            }
+        } else {
+            return self::getDefaultObjectClass();
+        }
+    }
+
+    private static function getDefaultObjectClass()
+    {
+        return '\Rhapsody\Object';
     }
 }

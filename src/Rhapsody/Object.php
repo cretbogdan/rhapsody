@@ -13,15 +13,21 @@ class Object
         $this->data = $data;
     }
 
+
+    /**
+     * Save object to database
+     */
     public function save()
     {
         if (isset($this->id)) {
             Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->id));
         } else {
             Rhapsody::getConnection()->insert($this->table, $this->data);
+            $this->id = Rhapsody::getConnection()->lastInsertId();
         };
     }
 
+    // Overload functions
 
     public function __set($name, $value)
     {
@@ -40,6 +46,7 @@ class Object
             ' in ' . $trace[0]['file'] .
             ' on line ' . $trace[0]['line'],
             E_USER_NOTICE);
+
         return null;
     }
 
