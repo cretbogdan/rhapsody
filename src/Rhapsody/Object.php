@@ -21,11 +21,11 @@ class Object
      */
     public function save()
     {
-        if (isset($this->id)) {
-            Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->id));
+        if (isset($this->data['id'])) {
+            Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->data['id']));
         } else {
             Rhapsody::getConnection()->insert($this->table, $this->data);
-            $this->id = Rhapsody::getConnection()->lastInsertId();
+            $this->data['id'] = Rhapsody::getConnection()->lastInsertId();
         };
     }
 
