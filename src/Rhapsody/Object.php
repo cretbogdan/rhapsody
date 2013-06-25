@@ -11,7 +11,10 @@ class Object
 
     public function __construct($table = null, array $data = array())
     {
-        $this->table = $table;
+        if ($table) {
+            $this->table = $table;
+        }
+
         $this->data = $data;
     }
 
