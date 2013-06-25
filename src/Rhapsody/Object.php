@@ -2,6 +2,8 @@
 
 namespace Rhapsody;
 
+use Doctrine\Common\Util\Inflector;
+
 class Object
 {
     public $table;
@@ -31,11 +33,13 @@ class Object
 
     public function __set($name, $value)
     {
+        $name = Inflector::tableize($name);
         $this->data[$name] = $value;
     }
 
     public function __get($name)
     {
+        $name = Inflector::tableize($name);
         if (array_key_exists($name, $this->data)) {
             return $this->data[$name];
         }
@@ -52,11 +56,13 @@ class Object
 
     public function __isset($name)
     {
+        $name = Inflector::tableize($name);
         return isset($this->data[$name]);
     }
 
     public function __unset($name)
     {
+        $name = Inflector::tableize($name);
         unset($this->data[$name]);
     }
 }

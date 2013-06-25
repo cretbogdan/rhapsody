@@ -2,6 +2,8 @@
 
 namespace Rhapsody;
 
+use Doctrine\Common\Util\Inflector;
+
 class Rhapsody
 {
     private static $conn;
@@ -28,6 +30,10 @@ class Rhapsody
         } else {
             $config = new \Doctrine\DBAL\Configuration();
             self::$conn = \Doctrine\DBAL\DriverManager::getConnection($parameters, $config);
+        }
+
+        if (isset($parameters['model_formatter'])) {
+            self::setModelFormatter($parameters['model_formatter']);
         }
     }
 
@@ -57,7 +63,7 @@ class Rhapsody
     public static function getObjectClass($table)
     {
         if (self::$modelFormatter) {
-            $class = self::$modelFormatter.'\\'.ucfirst($table);
+            $class = self::$modelFormatter.'\\'.Inflector::classify($table);
 
             if (class_exists($class)) {
                 return $class;
@@ -72,7 +78,7 @@ class Rhapsody
     public function getQueryClass($table)
     {
         if (self::$modelFormatter) {
-            $class = self::$modelFormatter.'\\'.ucfirst($table.'Query');
+            $class = self::$modelFormatter.'\\'.Inflector::classify($table.'Query');
 
             if (class_exists($class)) {
                 return $class;
