@@ -2,12 +2,14 @@
 
 namespace Rhapsody;
 
+use Doctrine\Common\Util\Inflector;
+
 class Query
 {
     protected $table;
     private $limit;
     private $filters = array();
-    private $orders = array();
+    private $orderByColumns = array();
     private $queryBuilder;
 
     protected function __construct($table = null)
@@ -24,18 +26,48 @@ class Query
         return new $class($table);
     }
 
+
+    /**
+     * Add an order by column
+     *
+     * @param  string $column
+     * @param  string $type
+     *
+     * @return Query
+     */
     public function orderBy($column, $type = 'asc')
     {
-        $this->orders[] = array('column' => $column, 'type' => $type);
+        $this->orderByColumns[] = array('column' => $column, 'type' => $type);
 
         return $this;
     }
 
+
+    /**
+     * Filter the query by a given column.
+     *
+     * @param  string $column
+     * @param  string $value
+     * @param  string $comparison
+     *
+     * @return Query
+     */
     public function filterBy($column, $value, $comparison = '=')
     {
-        return $this->where("$column $comparison ?", array($value));
+        $column = Inflector::tableize($column);
+
+        return $this->where("`$column` $comparison ?", array($value));
     }
 
+
+    /**
+     * Add a where condition
+     *
+     * @param  string $sql
+     * @param  string/array $params
+     *
+     * @return Query
+     */
     public function where($sql, $params = null)
     {
         $params = is_array($params) ? $params : array($params);
@@ -44,27 +76,44 @@ class Query
         return $this;
     }
 
+
+    /**
+     * Set the limit for current query
+     *
+     * @param  int $limit
+     */
     public function limit($limit)
     {
         $this->limit = $limit;
     }
 
+
+    /**
+     * Find a single record
+     *
+     * @return Object/null
+     */
     public function findOne()
     {
-        list($where, $params) = $this->getWhere();
-        $order = $this->getOrderByString();
-        $query = "SELECT * FROM `{$this->table}` $where $order LIMIT 1";
+        $this->limit(1);
+        list($queryString, $params) = $this->getQueryString();
+
+        $query = "SELECT * FROM `{$this->table}` ".$queryString;
         $data = Rhapsody::getConnection()->fetchAssoc($query, $params);
 
-        return Rhapsody::createObject($this->table, $data);
+        return $data ? Rhapsody::create($this->table, $data) : null;
     }
 
+
+    /**
+     * Find all records matching the query conditions
+     *
+     * @return Collection
+     */
     public function find()
     {
-        list($where, $params) = $this->getWhere();
-        $limit = $this->limit !== null ? " LIMIT $limit " : '';
-        $order = $this->getOrderByString();
-        $query = "SELECT * FROM `{$this->table}` $where $order $limit";
+        list($queryString, $params) = $this->getQueryString();
+        $query = "SELECT * FROM `{$this->table}` ".$queryString;
 
         $rows = Rhapsody::getConnection()->fetchAll($query, $params);
         $collection = new Collection($this->table);
@@ -73,42 +122,68 @@ class Query
         return $collection;
     }
 
+
+    /**
+     * Delete rows matching the query
+     *
+     * @return int Number of affected rows
+     */
     public function delete()
     {
-        list($where, $params) = $this->getWhere();
-        $limit = $limit !== null ? " LIMIT $limit " : '';
-        $order = $this->getOrderByString();
-        $query = "DELETE FROM `{$this->table}` $where $order $limit";
+        list($queryString, $params) = $this->getQueryString();
+        $query = "DELETE FROM `{$this->table}` ".$queryString;
 
         return Rhapsody::getConnection()->executeUpdate($query, $params);
     }
 
 
+    /**
+     * Update the table
+     *
+     * @param  array  $values
+     *
+     * @return int Number of affected rows
+     */
     public function update(array $values)
     {
-        list($where, $params) = $this->getWhere();
-        $limit = $limit !== null ? " LIMIT $limit " : '';
-        $order = $this->getOrderByString();
-
         $updateString = null;
         $updateParams = array();
         foreach ($values as $column => $value) {
-            $updateString .= $updateString ? " $column = ? " : ", $column = ?";
+            $column = Inflector::tableize($column);
+            $updateString .= $updateString ? " `$column` = ? " : ", `$column` = ?";
             $updateParams[] = $value;
         }
 
-        $query = "UPDATE `{$this->table}` SET $updateString $where $order $limit";
+        list($queryString, $params) = $this->getQueryString();
+        $query = "UPDATE `{$this->table}` SET $updateString ".$queryString;
         $params = array_merge($updateParams, $params);
 
         return Rhapsody::getConnection()->executeUpdate($query, $params);
     }
 
+
     /**
-     * Create the WHERE statement
+     * Get the query string and query parameters
+     *
+     * @return array($string, $params)
+     */
+    private function getQueryString()
+    {
+        list($where, $params) = $this->getWhereString();
+        $order = $this->getOrderByString();
+        $limit = $this->limit !== null ? " LIMIT {$this->limit} " : '';
+
+        $query = ' '.$where.$order.$limit.' ';
+
+        return array($query, $params);
+    }
+
+    /**
+     * Create the WHERE string
      *
      * @return array
      */
-    private function getWhere()
+    private function getWhereString()
     {
         $where = '';
         $params = array();
@@ -126,18 +201,43 @@ class Query
     }
 
 
+    /**
+     * Create the order by condition
+     *
+     * @return string
+     */
     private function getOrderByString()
     {
         $orderBy = '';
 
-        if (! empty($this->orders)) {
+        if (! empty($this->orderByColumns)) {
             $orderBy = ' ORDER BY ';
 
-            foreach ($this->orders as $order) {
-                $orderBy .= $order['column'].' '.$order['type'].' ';
+            foreach ($this->orderByColumns as $orderByColumn) {
+                $orderBy .= $orderByColumn['column'].' '.$orderByColumn['type'].' ';
             }
         }
 
         return $orderBy;
+    }
+
+
+    /**
+     * Magic methods
+     */
+    public function __call($name, $arguments)
+    {
+        if (strpos($name, 'filterBy') === 0) {
+            $column = str_replace('filterBy', '', $name);
+            $comparison = isset($arguments[1]) ? $arguments[1] : '=';
+
+            return $this->filterBy($column, $arguments[0], $comparison);
+        }
+
+        if (strpos($name, 'orderBy') === 0) {
+            $column = str_replace('orderBy', '', $name);
+
+            return $this->orderBy($column, $arguments[0]);
+        }
     }
 }

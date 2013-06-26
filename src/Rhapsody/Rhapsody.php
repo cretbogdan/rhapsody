@@ -38,28 +38,64 @@ class Rhapsody
     }
 
 
+    /**
+     * Set the model formatter for extending base classes
+     *
+     * @param  $string
+     */
     public static function setModelFormatter($string)
     {
         self::$modelFormatter = $string;
     }
 
-    public static function createObject($table, array $data = array())
+
+    /**
+     * Create a new record object for given object
+     *
+     * @param  string $table Table/Model name
+     * @param  array  $data  Populate date
+     *
+     * @return Object
+     */
+    public static function create($table, array $data = array())
     {
         $class = self::getObjectClass($table);
 
         return new $class($table, $data);
     }
 
-    public static function createQueryBuilder()
+
+    /**
+     * Create an instance of a query class for given table
+     *
+     * @param  string $table
+     *
+     * @return Query
+     */
+    public static function query($table)
     {
-        return self::getConnection()->createQueryBuilder();
+        return Query::create($table);
     }
 
+
+    /**
+     * Return the doctrine connection
+     *
+     * @return Doctrine\DBAL\Connection
+     */
     public static function getConnection()
     {
         return self::$conn;
     }
 
+
+    /**
+     * Get the object class for a given table
+     *
+     * @param  string $table
+     *
+     * @return string
+     */
     public static function getObjectClass($table)
     {
         if (self::$modelFormatter) {
@@ -75,6 +111,14 @@ class Rhapsody
         }
     }
 
+
+    /**
+     * Get the query class for a given table
+     *
+     * @param  string $table
+     *
+     * @return string
+     */
     public function getQueryClass($table)
     {
         if (self::$modelFormatter) {
@@ -90,6 +134,12 @@ class Rhapsody
         }
     }
 
+
+    /**
+     * Get the default object class
+     *
+     * @return string
+     */
     private static function getDefaultObjectClass()
     {
         return '\Rhapsody\Object';

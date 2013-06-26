@@ -14,7 +14,9 @@ class Collection extends BaseCollection
         parent::__construct($data);
     }
 
-
+    /**
+     * Save all objects to database
+     */
     public function save()
     {
         Rhapsody::getConnection()->beginTransaction();
@@ -24,7 +26,13 @@ class Collection extends BaseCollection
         Rhapsody::getConnection()->commit();
     }
 
-    public function fromArray($rows)
+
+    /**
+     * Populate the data from array
+     *
+     * @param  array $rows
+     */
+    public function fromArray(array $rows)
     {
         $class = Rhapsody::getObjectClass($this->table);
         $objects = array();

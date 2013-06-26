@@ -32,6 +32,17 @@ class Object
         };
     }
 
+
+    /**
+     * Delete from database
+     */
+    public function delete()
+    {
+        if (isset($this->data['id'])) {
+            Rhapsody::getConnection()->delete($this->table, array('id' => $this->data['id']));
+        }
+    }
+
     // Overload functions
 
     public function __set($name, $value)
@@ -49,7 +60,7 @@ class Object
 
         $trace = debug_backtrace();
         trigger_error(
-            'Undefined property via __get(): ' . $name .
+            'Undefined field or relation object ' . $name .
             ' in ' . $trace[0]['file'] .
             ' on line ' . $trace[0]['line'],
             E_USER_NOTICE);
