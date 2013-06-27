@@ -61,7 +61,7 @@ class Rhapsody
     {
         $class = self::getObjectClass($table);
 
-        return new $class($table, $data);
+        return new $class(Inflector::tableize($table), $data);
     }
 
 
