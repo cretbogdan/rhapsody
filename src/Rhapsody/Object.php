@@ -24,11 +24,11 @@ class Object
      */
     public function save()
     {
-        if (isset($this->data['id'])) {
-            Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->data['id']));
-        } else {
+        if ($this->isNew()) {
             Rhapsody::getConnection()->insert($this->table, $this->data);
             $this->data['id'] = Rhapsody::getConnection()->lastInsertId();
+        } else {
+            Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->data['id']));
         };
     }
 
@@ -38,9 +38,19 @@ class Object
      */
     public function delete()
     {
-        if (isset($this->data['id'])) {
+        if (! $this->isNew()) {
             Rhapsody::getConnection()->delete($this->table, array('id' => $this->data['id']));
         }
+    }
+
+    /**
+     * Check if object is new
+     *
+     * @return boolean
+     */
+    public function isNew()
+    {
+        return isset($this->data['id']) ? false : true;
     }
 
     // Overload functions

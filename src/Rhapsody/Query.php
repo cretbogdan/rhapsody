@@ -117,12 +117,9 @@ class Query
     {
         list($queryString, $params) = $this->getQueryString();
         $query = "SELECT * FROM `{$this->table}` ".$queryString;
-
         $rows = Rhapsody::getConnection()->fetchAll($query, $params);
-        $collection = new Collection($this->table);
-        $collection->fromArray($rows);
 
-        return $collection;
+        return Collection::create($this->table, $rows);
     }
 
 

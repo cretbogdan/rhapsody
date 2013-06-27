@@ -14,6 +14,14 @@ class Collection extends BaseCollection
         parent::__construct($data);
     }
 
+    public static function create($table, array $rows = array())
+    {
+        $collection = new static($table);
+        $collection->fromArray($rows);
+
+        return $collection;
+    }
+
     /**
      * Save all objects to database
      */
