@@ -56,7 +56,7 @@ class Query
     {
         $column = Inflector::tableize($column);
 
-        return $this->where("`$column` $comparison ?", array($value));
+        return $this->where("`$column` $comparison ?", $value);
     }
 
 
@@ -70,7 +70,10 @@ class Query
      */
     public function where($sql, $params = null)
     {
-        $params = is_array($params) ? $params : array($params);
+        if (! is_array($params)) {
+            $params = $params ? array($params) : array();
+        }
+
         $this->filters[] = array('sql' => $sql, 'params' => $params);
 
         return $this;
@@ -179,7 +182,7 @@ class Query
     }
 
     /**
-     * Create the WHERE string
+     * Get the WHERE string and params
      *
      * @return array
      */
@@ -202,7 +205,7 @@ class Query
 
 
     /**
-     * Create the order by condition
+     * Get the order by string
      *
      * @return string
      */
