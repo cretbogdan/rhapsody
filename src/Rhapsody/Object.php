@@ -53,29 +53,40 @@ class Object
         return isset($this->data['id']) ? false : true;
     }
 
-    // Overload functions
-
-    public function __set($name, $value)
+    public function set($name, $value)
     {
         $name = Inflector::tableize($name);
         $this->data[$name] = $value;
     }
 
-    public function __get($name)
+    public function get($name)
     {
         $name = Inflector::tableize($name);
         if (array_key_exists($name, $this->data)) {
             return $this->data[$name];
         }
 
-        $trace = debug_backtrace();
-        trigger_error(
-            'Undefined field or relation object ' . $name .
-            ' in ' . $trace[0]['file'] .
-            ' on line ' . $trace[0]['line'],
-            E_USER_NOTICE);
+        // TODO: No errors for new object
+        // $trace = debug_backtrace();
+        // trigger_error(
+        //     'Undefined field or relation object ' . $name .
+        //     ' in ' . $trace[0]['file'] .
+        //     ' on line ' . $trace[0]['line'],
+        //     E_USER_NOTICE);
 
         return null;
+    }
+
+    // Overload functions
+
+    public function __set($name, $value)
+    {
+        $this->set($name, $value);
+    }
+
+    public function __get($name)
+    {
+        return $this->get($name);
     }
 
     public function __isset($name)

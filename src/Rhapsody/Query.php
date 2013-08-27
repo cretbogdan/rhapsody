@@ -15,6 +15,7 @@ class Query
     protected function __construct($table = null)
     {
         if ($table) {
+            $table = Inflector::tableize($table);
             $this->table = $table;
         }
     }
@@ -37,6 +38,7 @@ class Query
      */
     public function orderBy($column, $type = 'asc')
     {
+        $column = Inflector::tableize($column);
         $this->orderByColumns[] = array('column' => $column, 'type' => $type);
 
         return $this;

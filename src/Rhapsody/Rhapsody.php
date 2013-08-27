@@ -119,7 +119,7 @@ class Rhapsody
      *
      * @return string
      */
-    public function getQueryClass($table)
+    public static function getQueryClass($table)
     {
         if (self::$modelFormatter) {
             $class = self::$modelFormatter.'\\'.Inflector::classify($table.'Query');
