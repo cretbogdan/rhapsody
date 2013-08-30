@@ -7,7 +7,7 @@ use Doctrine\Common\Util\Inflector;
 class Object
 {
     public $table;
-    public $data;
+    public $data = array();
 
     public function __construct($table = null, array $data = array())
     {
@@ -15,7 +15,9 @@ class Object
             $this->table = $table;
         }
 
-        $this->data = $data;
+        foreach ($data as $column => $value) {
+            $this->set($column, $value);
+        }
     }
 
 
@@ -56,6 +58,11 @@ class Object
     public function set($name, $value)
     {
         $name = Inflector::tableize($name);
+
+        if (is_bool($value)) {
+            $value = (int) $value;
+        }
+
         $this->data[$name] = $value;
     }
 
@@ -66,7 +73,7 @@ class Object
             return $this->data[$name];
         }
 
-        // TODO: No errors for new object
+        // TODO: No errors for new object (e.g. symfony form builder new object)
         // $trace = debug_backtrace();
         // trigger_error(
         //     'Undefined field or relation object ' . $name .

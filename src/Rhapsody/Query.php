@@ -6,8 +6,10 @@ use Doctrine\Common\Util\Inflector;
 
 class Query
 {
+    public static $lastExecutedQuery;
     protected $table;
     private $limit;
+    private $offset;
     private $filters = array();
     private $orderByColumns = array();
     private $queryBuilder;
@@ -25,6 +27,15 @@ class Query
         $class = Rhapsody::getQueryClass($table);
 
         return new $class($table);
+    }
+
+
+    /**
+     * Truncate table
+     */
+    public function truncate()
+    {
+        return Rhapsody::getConnection()->executeUpdate("TRUNCATE TABLE `{$this->table}`");
     }
 
 
@@ -58,6 +69,14 @@ class Query
     {
         $column = Inflector::tableize($column);
 
+        if (is_bool($value)) {
+            $value = (int) $value;
+        }
+
+        if ('in' == strtolower($comparison) && is_array($value)) {
+            $value = implode(',', $value);
+        }
+
         return $this->where("`$column` $comparison ?", $value);
     }
 
@@ -72,15 +91,29 @@ class Query
      */
     public function where($sql, $params = null)
     {
-        if (! is_array($params)) {
-            $params = $params ? array($params) : array();
-        }
+        if ($sql) {
+            if (! is_array($params)) {
+                $params = $params ? array($params) : array();
+            }
 
-        $this->filters[] = array('sql' => $sql, 'params' => $params);
+            $this->filters[] = array('sql' => $sql, 'params' => $params);
+        }
 
         return $this;
     }
 
+
+    /**
+     * Set the offset for current query
+     *
+     * @param  int $offset
+     */
+    public function offset($offset)
+    {
+        $this->offset = $offset;
+
+        return $this;
+    }
 
     /**
      * Set the limit for current query
@@ -90,6 +123,8 @@ class Query
     public function limit($limit)
     {
         $this->limit = $limit;
+
+        return $this;
     }
 
 
@@ -104,6 +139,7 @@ class Query
         list($queryString, $params) = $this->getQueryString();
 
         $query = "SELECT * FROM `{$this->table}` ".$queryString;
+        self::$lastExecutedQuery = $query;
         $data = Rhapsody::getConnection()->fetchAssoc($query, $params);
 
         return $data ? Rhapsody::create($this->table, $data) : null;
@@ -120,6 +156,7 @@ class Query
         list($queryString, $params) = $this->getQueryString();
         $query = "SELECT * FROM `{$this->table}` ".$queryString;
         $rows = Rhapsody::getConnection()->fetchAll($query, $params);
+        self::$lastExecutedQuery = $query;
 
         return Collection::create($this->table, $rows);
     }
@@ -134,6 +171,7 @@ class Query
     {
         list($queryString, $params) = $this->getQueryString();
         $query = "DELETE FROM `{$this->table}` ".$queryString;
+        self::$lastExecutedQuery = $query;
 
         return Rhapsody::getConnection()->executeUpdate($query, $params);
     }
@@ -159,6 +197,7 @@ class Query
         list($queryString, $params) = $this->getQueryString();
         $query = "UPDATE `{$this->table}` SET $updateString ".$queryString;
         $params = array_merge($updateParams, $params);
+        self::$lastExecutedQuery = $query;
 
         return Rhapsody::getConnection()->executeUpdate($query, $params);
     }
@@ -173,7 +212,8 @@ class Query
     {
         list($where, $params) = $this->getWhereString();
         $order = $this->getOrderByString();
-        $limit = $this->limit !== null ? " LIMIT {$this->limit} " : '';
+        $offset = $this->offset === null ? '' : $this->offset.', ';
+        $limit = $this->limit !== null ? " LIMIT $offset {$this->limit} " : '';
 
         $query = ' '.$where.$order.$limit.' ';
 
