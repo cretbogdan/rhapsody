@@ -162,6 +162,22 @@ class Query
     }
 
 
+    public function count()
+    {
+        list($queryString, $params) = $this->getQueryString();
+        $query = "SELECT COUNT(*) FROM `{$this->table}` ".$queryString;
+        $count = Rhapsody::getConnection()->fetchColumn($query, $params);
+        self::$lastExecutedQuery = $query;
+
+        return $count;
+    }
+
+    public function paginate($page, $maxPerPage = 20)
+    {
+        return new Pager($this, $page, $maxPerPage);
+    }
+
+
     /**
      * Delete rows matching the query
      *
