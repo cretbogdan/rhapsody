@@ -14,14 +14,15 @@ class Rhapsody
      * Accepts a Doctrine connection
      *
      * @param  array $parameters Connection parameters
-     *                  array(
-     *                      'doctrine_connection' => $conn,
-     *                      'dbname' => 'mydb',
-     *                      'user' => 'user',
-     *                      'password' => 'secret',
-     *                      'host' => 'localhost',
-     *                      'driver' => 'pdo_mysql',
-     *                  );
+     *    array(
+     *        'doctrine_connection' => $conn,
+     *        'dbname' => 'mydb',
+     *        'user' => 'user',
+     *        'password' => 'secret',
+     *        'host' => 'localhost',
+     *        'driver' => 'pdo_mysql',
+     *        'model_formatter' => 'MyProject\Model'
+     *    );
      */
     public static function setup($parameters)
     {
@@ -86,6 +87,17 @@ class Rhapsody
     public static function getConnection()
     {
         return self::$conn;
+    }
+
+
+    /**
+     * Get last executed query
+     *
+     * @return string
+     */
+    public static function getLastExecutedQuery()
+    {
+        return Query::getLastExecutedQuery();
     }
 
 

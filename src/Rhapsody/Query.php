@@ -6,11 +6,12 @@ use Doctrine\Common\Util\Inflector;
 
 class Query
 {
-    public static $lastExecutedQuery;
+    private static $queryStack = array();
     protected $table;
     private $limit;
     private $offset;
     private $filters = array();
+    private $exactFilters = array();
     private $orderByColumns = array();
     private $queryBuilder;
 
@@ -77,6 +78,10 @@ class Query
             $value = implode(',', $value);
         }
 
+        if ('=' === $comparison) {
+            $this->exactFilters[] = array($column, $value);
+        }
+
         return $this->where("`$column` $comparison ?", $value);
     }
 
@@ -93,7 +98,7 @@ class Query
     {
         if ($sql) {
             if (! is_array($params)) {
-                $params = $params ? array($params) : array();
+                $params = $params === '' ? array() : array($params);
             }
 
             $this->filters[] = array('sql' => $sql, 'params' => $params);
@@ -139,12 +144,37 @@ class Query
         list($queryString, $params) = $this->getQueryString();
 
         $query = "SELECT * FROM `{$this->table}` ".$queryString;
-        self::$lastExecutedQuery = $query;
         $data = Rhapsody::getConnection()->fetchAssoc($query, $params);
+        $this->pushQueryStack($query, $params);
 
         return $data ? Rhapsody::create($this->table, $data) : null;
     }
 
+    /**
+     * Find a single record or create a new one
+     *
+     * @param boolean $save Save newly created object
+     *
+     * @return Object/null
+     */
+    public function findOneOrCreate($save = false)
+    {
+        $object = $this->findOne();
+
+        if (! $object) {
+            $object = Rhapsody::create($this->table);
+
+            foreach ($this->exactFilters as $filter) {
+                $object->{$filter[0]} = $filter[1];
+            }
+
+            if ($save) {
+                $object->save();
+            }
+        }
+
+        return $object;
+    }
 
     /**
      * Find all records matching the query conditions
@@ -156,22 +186,33 @@ class Query
         list($queryString, $params) = $this->getQueryString();
         $query = "SELECT * FROM `{$this->table}` ".$queryString;
         $rows = Rhapsody::getConnection()->fetchAll($query, $params);
-        self::$lastExecutedQuery = $query;
+        $this->pushQueryStack($query, $params);
 
         return Collection::create($this->table, $rows);
     }
 
-
+    /**
+     * Count all records matching the query conditions
+     */
     public function count()
     {
         list($queryString, $params) = $this->getQueryString();
         $query = "SELECT COUNT(*) FROM `{$this->table}` ".$queryString;
         $count = Rhapsody::getConnection()->fetchColumn($query, $params);
-        self::$lastExecutedQuery = $query;
+        $this->pushQueryStack($query, $params);
 
         return $count;
     }
 
+
+    /**
+     * Create a pager
+     *
+     * @param  integer  $page
+     * @param  integer  $maxPerPage
+     *
+     * @return Pager
+     */
     public function paginate($page, $maxPerPage = 20)
     {
         return new Pager($this, $page, $maxPerPage);
@@ -187,7 +228,7 @@ class Query
     {
         list($queryString, $params) = $this->getQueryString();
         $query = "DELETE FROM `{$this->table}` ".$queryString;
-        self::$lastExecutedQuery = $query;
+        $this->pushQueryStack($query, $params);
 
         return Rhapsody::getConnection()->executeUpdate($query, $params);
     }
@@ -213,11 +254,27 @@ class Query
         list($queryString, $params) = $this->getQueryString();
         $query = "UPDATE `{$this->table}` SET $updateString ".$queryString;
         $params = array_merge($updateParams, $params);
-        self::$lastExecutedQuery = $query;
+        $this->pushQueryStack($query, $params);
 
         return Rhapsody::getConnection()->executeUpdate($query, $params);
     }
 
+    /**
+     * Get last executed query
+     *
+     * @return string
+     */
+    public static function getLastExecutedQuery()
+    {
+        $query = end(array_values(static::$queryStack));
+
+        if (false !== $query) {
+            list ($sql, $params) = $query;
+            $query = $sql.print_r($params, true);
+        }
+
+        return $query;
+    }
 
     /**
      * Get the query string and query parameters
@@ -277,6 +334,12 @@ class Query
         }
 
         return $orderBy;
+    }
+
+
+    private function pushQueryStack($sql, $params)
+    {
+        static::$queryStack[] = array($sql, $params);
     }
 
 
