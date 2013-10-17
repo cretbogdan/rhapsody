@@ -71,7 +71,7 @@ class Object
             return true;
         }
 
-        foreach ($data as $column => $value) {
+        foreach ($this->data as $column => $value) {
             if (isset($this->initialData[$column])) {
                 if ($this->initialData[$column] != $value) {
                     return true;
