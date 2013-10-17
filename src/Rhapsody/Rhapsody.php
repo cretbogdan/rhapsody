@@ -3,6 +3,7 @@
 namespace Rhapsody;
 
 use Doctrine\Common\Util\Inflector;
+use Doctrine\DBAL\Connection;
 
 class Rhapsody
 {
@@ -27,6 +28,10 @@ class Rhapsody
     public static function setup($parameters)
     {
         if (isset($parameters['doctrine_connection'])) {
+            if (! is_object($parameters['doctrine_connection']) || ! $parameters['doctrine_connection'] instanceof Connection) {
+                throw new \InvalidArgumentException("Parameter doctrine_connection must be instance of \Doctrine\DBAL\Connection");
+            }
+
             self::$conn = $parameters['doctrine_connection'];
         } else {
             $config = new \Doctrine\DBAL\Configuration();
