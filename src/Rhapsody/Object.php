@@ -7,7 +7,8 @@ use Doctrine\Common\Util\Inflector;
 class Object
 {
     public $table;
-    public $data = array();
+    private $data = array();
+    private $initialData = array();
 
     public function __construct($table = null, array $data = array())
     {
@@ -18,6 +19,8 @@ class Object
         foreach ($data as $column => $value) {
             $this->set($column, $value);
         }
+
+        $this->initialData = $data;
     }
 
 
@@ -29,9 +32,11 @@ class Object
         if ($this->isNew()) {
             Rhapsody::getConnection()->insert($this->table, $this->data);
             $this->data['id'] = Rhapsody::getConnection()->lastInsertId();
-        } else {
+        } elseif ($this->isModified()) {
             Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->data['id']));
-        };
+        } else {
+            // Nothing modified
+        }
     }
 
 
@@ -55,6 +60,36 @@ class Object
         return isset($this->data['id']) ? false : true;
     }
 
+    /**
+     * Check if object is modified
+     *
+     * @return boolean
+     */
+    public function isModified()
+    {
+        if ($this->isNew()) {
+            return true;
+        }
+
+        foreach ($data as $column => $value) {
+            if (isset($this->initialData[$column])) {
+                if ($this->initialData[$column] != $value) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Set field value
+     *
+     * @param string                $name
+     * @param string|integer|float  $value
+     */
     public function set($name, $value)
     {
         $name = Inflector::tableize($name);
@@ -66,6 +101,13 @@ class Object
         $this->data[$name] = $value;
     }
 
+    /**
+     * Get field value if exists, NULL otherwise
+     *
+     * @param  string $name
+     *
+     * @return string|null
+     */
     public function get($name)
     {
         $name = Inflector::tableize($name);

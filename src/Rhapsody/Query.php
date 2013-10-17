@@ -13,7 +13,6 @@ class Query
     private $filters = array();
     private $exactFilters = array();
     private $orderByColumns = array();
-    private $queryBuilder;
 
     protected function __construct($table = null)
     {
@@ -360,5 +359,7 @@ class Query
 
             return $this->orderBy($column, $arguments[0]);
         }
+
+        throw new \BadMethodCallException("Method $name does not exist!");
     }
 }
