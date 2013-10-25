@@ -3,6 +3,10 @@
 namespace Rhapsody;
 
 use Doctrine\Common\Util\Inflector;
+use Rhapsody\Query\Filter;
+use Rhapsody\Query\ColumnFilter;
+use Rhapsody\Query\FilterCollection;
+use Rhapsody\Query\FilterUtils;
 
 class Query
 {
@@ -10,8 +14,7 @@ class Query
     protected $table;
     private $limit;
     private $offset;
-    private $filters = array();
-    private $exactFilters = array();
+    private $filters;
     private $orderByColumns = array();
 
     protected function __construct($table = null)
@@ -19,6 +22,7 @@ class Query
         if ($table) {
             $table = Inflector::tableize($table);
             $this->table = $table;
+            $this->filters = new FilterCollection();
         }
     }
 
@@ -60,28 +64,16 @@ class Query
      * Filter the query by a given column.
      *
      * @param  string $column
-     * @param  string $value
+     * @param  mixed  $value
      * @param  string $comparison
      *
      * @return Query
      */
     public function filterBy($column, $value, $comparison = '=')
     {
-        $column = Inflector::tableize($column);
+        $this->filters->append(new ColumnFilter($column, $value, $comparison));
 
-        if (is_bool($value)) {
-            $value = (int) $value;
-        }
-
-        if ('in' == strtolower($comparison) && is_array($value)) {
-            $value = implode(',', $value);
-        }
-
-        if ('=' === $comparison) {
-            $this->exactFilters[] = array($column, $value);
-        }
-
-        return $this->where("`$column` $comparison ?", $value);
+        return $this;
     }
 
 
@@ -96,11 +88,8 @@ class Query
     public function where($sql, $params = null)
     {
         if ($sql) {
-            if (! is_array($params)) {
-                $params = $params === '' ? array() : array($params);
-            }
-
-            $this->filters[] = array('sql' => $sql, 'params' => $params);
+            $filter = new Filter($sql, $params);
+            $this->filters->append($filter);
         }
 
         return $this;
@@ -163,8 +152,10 @@ class Query
         if (! $object) {
             $object = Rhapsody::create($this->table);
 
-            foreach ($this->exactFilters as $filter) {
-                $object->{$filter[0]} = $filter[1];
+            foreach ($this->filters as $filter) {
+                if ($filter instanceof ColumnFilter) {
+                    $object->set($filter->getColumn(), $filter->getValue());
+                }
             }
 
             if ($save) {
@@ -282,36 +273,12 @@ class Query
      */
     private function getQueryString()
     {
-        list($where, $params) = $this->getWhereString();
-        $order = $this->getOrderByString();
         $offset = $this->offset === null ? '' : $this->offset.', ';
         $limit = $this->limit !== null ? " LIMIT $offset {$this->limit} " : '';
 
-        $query = ' '.$where.$order.$limit.' ';
+        $query = ' WHERE '.$this->filters->getSql().$this->getOrderByString().$limit.' ';
 
-        return array($query, $params);
-    }
-
-    /**
-     * Get the WHERE string and params
-     *
-     * @return array
-     */
-    private function getWhereString()
-    {
-        $where = '';
-        $params = array();
-
-        if (! empty($this->filters)) {
-            $where = ' WHERE 1 ';
-            foreach ($this->filters as $filter) {
-                $where .= ' AND '.$filter['sql'];
-                $params = array_merge($params, $filter['params']);
-            }
-            $where .= ' ';
-        }
-
-        return array($where, $params);
+        return array($query, $this->filters->getParameters());
     }
 
 
