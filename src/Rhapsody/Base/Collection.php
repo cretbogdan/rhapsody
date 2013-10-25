@@ -232,6 +232,11 @@ class Collection extends \ArrayObject
         return $ret;
     }
 
+    public function add($value)
+    {
+        return $this->append($value);
+    }
+
     /**
      * Add an element to the collection with the given key
      * Alias for ArrayObject::offsetSet()
