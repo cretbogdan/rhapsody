@@ -4,10 +4,13 @@ namespace Rhapsody;
 
 use Doctrine\Common\Util\Inflector;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Logging\SQLLogger;
+use Doctrine\DBAL\Logging\DebugStack;
 
 class Rhapsody
 {
     private static $conn;
+    private static $tableManager;
     private static $modelFormatter;
 
     /**
@@ -41,6 +44,16 @@ class Rhapsody
         if (isset($parameters['model_formatter'])) {
             self::setModelFormatter($parameters['model_formatter']);
         }
+    }
+
+
+    public static function setQueryLogger(SQLLogger $logger = null)
+    {
+        if (null === $logger) {
+            $logger = new DebugStack();
+        }
+
+        self::$conn->getConfiguration()->setSQLLogger($logger);
     }
 
 
@@ -81,6 +94,16 @@ class Rhapsody
     public static function query($table)
     {
         return Query::create($table);
+    }
+
+
+    public static function getTableManager()
+    {
+        if (null == self::$tableManager) {
+            self::$tableManager = new TableManager(self::$conn);
+        }
+
+        return self::$tableManager;
     }
 
 

@@ -10,19 +10,20 @@ use Rhapsody\Query\FilterUtils;
 
 class Query
 {
-    private static $queryStack = array();
     protected $table;
+    private $queryBuilder;
     private $limit;
     private $offset;
     private $filters;
     private $orderByColumns = array();
 
-    protected function __construct($table = null)
+    protected function __construct($table)
     {
         if ($table) {
             $table = Inflector::tableize($table);
             $this->table = $table;
             $this->filters = new FilterCollection();
+            $this->queryBuilder = Rhapsody::getConnection()->createQueryBuilder();
         }
     }
 
@@ -51,10 +52,24 @@ class Query
      *
      * @return Query
      */
-    public function orderBy($column, $type = 'asc')
+    public function orderBy($column, $type = null)
     {
         $column = Inflector::tableize($column);
-        $this->orderByColumns[] = array('column' => $column, 'type' => $type);
+        $this->queryBuilder->addOrderBy($column, $type);
+
+        return $this;
+    }
+
+    /**
+     * Add a having condition
+     *
+     * @param  string $having
+     *
+     * @return Query
+     */
+    public function having($having)
+    {
+        $this->queryBuilder->andHaving($having);
 
         return $this;
     }
@@ -71,7 +86,9 @@ class Query
      */
     public function filterBy($column, $value, $comparison = '=')
     {
-        $this->filters->append(new ColumnFilter($column, $value, $comparison));
+        $filter = new ColumnFilter($column, $value);
+        $this->filters->append($filter);
+        $this->queryBuilder->where($filter->getColumn()." $comparison ". $this->queryBuilder->createNamedParameter($filter->getValue()));
 
         return $this;
     }
@@ -85,11 +102,17 @@ class Query
      *
      * @return Query
      */
-    public function where($sql, $params = null)
+    public function where($sql, array $params = array())
     {
         if ($sql) {
-            $filter = new Filter($sql, $params);
-            $this->filters->append($filter);
+            $this->queryBuilder->andWhere($sql);
+            foreach ($params as $key => $param) {
+                if (is_int($key)) {
+                    $this->queryBuilder->createPositionalParameter($param);
+                } else {
+                    $this->queryBuilder->setParameter($key, $param);
+                }
+            }
         }
 
         return $this;
@@ -103,7 +126,7 @@ class Query
      */
     public function offset($offset)
     {
-        $this->offset = $offset;
+        $this->queryBuilder->setFirstResult($limit);
 
         return $this;
     }
@@ -115,7 +138,7 @@ class Query
      */
     public function limit($limit)
     {
-        $this->limit = $limit;
+        $this->queryBuilder->setMaxResults($limit);
 
         return $this;
     }
@@ -129,11 +152,8 @@ class Query
     public function findOne()
     {
         $this->limit(1);
-        list($queryString, $params) = $this->getQueryString();
-
-        $query = "SELECT * FROM `{$this->table}` ".$queryString;
-        $data = Rhapsody::getConnection()->fetchAssoc($query, $params);
-        $this->pushQueryStack($query, $params);
+        $stmt = $this->getSelectBuilder()->execute();
+        $data = $stmt->fetch();
 
         return $data ? Rhapsody::create($this->table, $data) : null;
     }
@@ -145,7 +165,7 @@ class Query
      *
      * @return Object/null
      */
-    public function findOneOrCreate($save = false)
+    public function findOneOrCreate()
     {
         $object = $this->findOne();
 
@@ -153,13 +173,7 @@ class Query
             $object = Rhapsody::create($this->table);
 
             foreach ($this->filters as $filter) {
-                if ($filter instanceof ColumnFilter) {
-                    $object->set($filter->getColumn(), $filter->getValue());
-                }
-            }
-
-            if ($save) {
-                $object->save();
+                $object->set($filter->getColumn(), $filter->getValue());
             }
         }
 
@@ -173,12 +187,9 @@ class Query
      */
     public function find()
     {
-        list($queryString, $params) = $this->getQueryString();
-        $query = "SELECT * FROM `{$this->table}` ".$queryString;
-        $rows = Rhapsody::getConnection()->fetchAll($query, $params);
-        $this->pushQueryStack($query, $params);
+        $stmt = $this->getSelectBuilder()->execute();
 
-        return Collection::create($this->table, $rows);
+        return Collection::create($this->table, $stmt->fetchAll());
     }
 
     /**
@@ -186,12 +197,9 @@ class Query
      */
     public function count()
     {
-        list($queryString, $params) = $this->getQueryString();
-        $query = "SELECT COUNT(*) FROM `{$this->table}` ".$queryString;
-        $count = Rhapsody::getConnection()->fetchColumn($query, $params);
-        $this->pushQueryStack($query, $params);
+        $this->limit = 1;
 
-        return $count;
+        return (int) $this->getCountBuilder()->execute()->fetchColumn();
     }
 
 
@@ -216,11 +224,7 @@ class Query
      */
     public function delete()
     {
-        list($queryString, $params) = $this->getQueryString();
-        $query = "DELETE FROM `{$this->table}` ".$queryString;
-        $this->pushQueryStack($query, $params);
-
-        return Rhapsody::getConnection()->executeUpdate($query, $params);
+        return $this->getTableBuilder()->delete($this->table, '')->execute();
     }
 
 
@@ -233,81 +237,27 @@ class Query
      */
     public function update(array $values)
     {
-        $updateString = null;
-        $updateParams = array();
         foreach ($values as $column => $value) {
-            $column = Inflector::tableize($column);
-            $updateString .= $updateString ? " `$column` = ? " : ", `$column` = ?";
-            $updateParams[] = $value;
+            $this->queryBuilder->set($column, $value);
         }
 
-        list($queryString, $params) = $this->getQueryString();
-        $query = "UPDATE `{$this->table}` SET $updateString ".$queryString;
-        $params = array_merge($updateParams, $params);
-        $this->pushQueryStack($query, $params);
-
-        return Rhapsody::getConnection()->executeUpdate($query, $params);
+        return $this->getTableBuilder()->update($this->table, '')->execute();
     }
 
-    /**
-     * Get last executed query
-     *
-     * @return string
-     */
-    public static function getLastExecutedQuery()
+    private function getSelectBuilder()
     {
-        $query = end(array_values(static::$queryStack));
-
-        if (false !== $query) {
-            list ($sql, $params) = $query;
-            $query = $sql.print_r($params, true);
-        }
-
-        return $query;
+        return $this->getTableBuilder()->select('*'); //->execute();
     }
 
-    /**
-     * Get the query string and query parameters
-     *
-     * @return array($string, $params)
-     */
-    private function getQueryString()
+    private function getCountBuilder()
     {
-        $offset = $this->offset === null ? '' : $this->offset.', ';
-        $limit = $this->limit !== null ? " LIMIT $offset {$this->limit} " : '';
-
-        $query = ' WHERE '.$this->filters->getSql().$this->getOrderByString().$limit.' ';
-
-        return array($query, $this->filters->getParameters());
+        return $this->getTableBuilder()->select('COUNT(*)'); //->execute();
     }
 
-
-    /**
-     * Get the order by string
-     *
-     * @return string
-     */
-    private function getOrderByString()
+    private function getTableBuilder()
     {
-        $orderBy = '';
-
-        if (! empty($this->orderByColumns)) {
-            $orderBy = ' ORDER BY ';
-
-            foreach ($this->orderByColumns as $orderByColumn) {
-                $orderBy .= $orderByColumn['column'].' '.$orderByColumn['type'].' ';
-            }
-        }
-
-        return $orderBy;
+        return $this->queryBuilder->from($this->table, $this->table);
     }
-
-
-    private function pushQueryStack($sql, $params)
-    {
-        static::$queryStack[] = array($sql, $params);
-    }
-
 
     /**
      * Magic methods

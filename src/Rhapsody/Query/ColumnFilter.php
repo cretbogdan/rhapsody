@@ -4,19 +4,17 @@ namespace Rhapsody\Query;
 
 use Doctrine\Common\Util\Inflector;
 
-class ColumnFilter extends Filter
+class ColumnFilter
 {
     private $column;
     private $value;
 
-    public function __construct($column, $value, $comparison = '=')
+    public function __construct($column, $value)
     {
         $column = Inflector::tableize($column);
-        $value = FilterUtils::cleanValue($value, $comparison);
+        $value = FilterUtils::cleanValue($value, '=');
         $this->column = $column;
         $this->value = $value;
-
-        parent::__construct("$column $comparison ?", $value);
     }
 
     public function getColumn()

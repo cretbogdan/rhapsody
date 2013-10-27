@@ -9,12 +9,15 @@ class Object
     public $table;
     private $data = array();
     private $initialData = array();
+    private $columns;
 
     public function __construct($table = null, array $data = array())
     {
         if ($table) {
             $this->table = $table;
         }
+
+        $this->setDefaultValues();
 
         foreach ($data as $column => $value) {
             $this->set($column, $value);
@@ -57,7 +60,7 @@ class Object
      */
     public function isNew()
     {
-        return isset($this->data['id']) ? false : true;
+        return empty($this->initialData);
     }
 
     /**
@@ -94,11 +97,18 @@ class Object
     {
         $name = Inflector::tableize($name);
 
-        if (is_bool($value)) {
-            $value = (int) $value;
+        // auto increment
+        if('id' === $name) {
+            return;
         }
 
-        $this->data[$name] = $value;
+        if ($this->hasColumn($name)) {
+            $this->data[$name] = $this->getColumnType($name)->convertToPHPValue($value, Rhapsody::getConnection()->getDatabasePlatform());
+
+            return;
+        }
+
+        throw new \InvalidArgumentException("Column $name does not exist!");
     }
 
     /**
@@ -111,19 +121,53 @@ class Object
     public function get($name)
     {
         $name = Inflector::tableize($name);
-        if (array_key_exists($name, $this->data)) {
+        if ($this->hasColumn($name)) {
             return $this->data[$name];
         }
 
-        // TODO: No errors for new object (e.g. symfony form builder new object)
-        // $trace = debug_backtrace();
-        // trigger_error(
-        //     'Undefined field or relation object ' . $name .
-        //     ' in ' . $trace[0]['file'] .
-        //     ' on line ' . $trace[0]['line'],
-        //     E_USER_NOTICE);
+        throw new \InvalidArgumentException('Undefined field or relation object '.$name);
+    }
 
-        return null;
+    public function has($name)
+    {
+        $name = Inflector::tableize($name);
+        return isset($this->data[$name]);
+    }
+
+    public function hasColumn($name)
+    {
+        return in_array($name, $this->getColumnNames());
+    }
+
+    public function getColumn($name)
+    {
+        $columns = $this->getColumns();
+
+        return $columns[$name];
+    }
+
+    public function getColumnType($name)
+    {
+        $columns = $this->getColumns();
+
+        return $columns[$name]->getType();
+    }
+
+    public function getColumnNames()
+    {
+        return array_keys($this->getColumns());
+    }
+
+    public function getColumns()
+    {
+        return Rhapsody::getTableManager()->getColumns($this->getTable());
+    }
+
+    private function setDefaultValues()
+    {
+        foreach ($this->getColumnNames() as $column) {
+            $this->set($column, null);
+        }
     }
 
     // Overload functions
@@ -140,13 +184,17 @@ class Object
 
     public function __isset($name)
     {
-        $name = Inflector::tableize($name);
-        return isset($this->data[$name]);
+        return $this->has($name);
     }
 
     public function __unset($name)
     {
         $name = Inflector::tableize($name);
         unset($this->data[$name]);
+    }
+
+    protected function getTable()
+    {
+        return $this->table;
     }
 }
