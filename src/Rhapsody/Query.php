@@ -88,7 +88,8 @@ class Query
     {
         $filter = new ColumnFilter($column, $value);
         $this->filters->append($filter);
-        $this->queryBuilder->where($filter->getColumn()." $comparison ". $this->queryBuilder->createNamedParameter($filter->getValue()));
+
+        $this->queryBuilder->andWhere($filter->getColumn()." $comparison ". $this->queryBuilder->createNamedParameter($filter->getValue()));
 
         return $this;
     }

@@ -35,11 +35,13 @@ class Rhapsody
                 throw new \InvalidArgumentException("Parameter doctrine_connection must be instance of \Doctrine\DBAL\Connection");
             }
 
-            self::$conn = $parameters['doctrine_connection'];
+            $conn = $parameters['doctrine_connection'];
         } else {
             $config = new \Doctrine\DBAL\Configuration();
-            self::$conn = \Doctrine\DBAL\DriverManager::getConnection($parameters, $config);
+            $conn = \Doctrine\DBAL\DriverManager::getConnection($parameters, $config);
         }
+
+        Rhapsody::setConnection($conn);
 
         if (isset($parameters['model_formatter'])) {
             self::setModelFormatter($parameters['model_formatter']);
@@ -50,7 +52,7 @@ class Rhapsody
     public static function setQueryLogger(SQLLogger $logger = null)
     {
         if (null === $logger) {
-            $logger = new DebugStack();
+            $logger = new Logger\EchoDebugStack();
         }
 
         self::$conn->getConfiguration()->setSQLLogger($logger);
@@ -104,6 +106,12 @@ class Rhapsody
         }
 
         return self::$tableManager;
+    }
+
+
+    public static function setConnection(Connection $conn)
+    {
+        self::$conn = $conn;
     }
 
 

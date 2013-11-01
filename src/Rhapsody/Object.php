@@ -32,14 +32,28 @@ class Object
      */
     public function save()
     {
+        $databaseData = $this->getDatabaseConvertedData();
+
         if ($this->isNew()) {
-            Rhapsody::getConnection()->insert($this->table, $this->data);
+            Rhapsody::getConnection()->insert($this->table, $databaseData);
             $this->data['id'] = Rhapsody::getConnection()->lastInsertId();
         } elseif ($this->isModified()) {
-            Rhapsody::getConnection()->update($this->table, $this->data, array('id' => $this->data['id']));
+            Rhapsody::getConnection()->update($this->table, $databaseData, array('id' => $databaseData['id']));
         } else {
             // Nothing modified
         }
+    }
+
+
+    private function getDatabaseConvertedData()
+    {
+        $databaseData = array();
+
+        foreach ($this->data as $column => $value) {
+            $databaseData[$column] = $this->getColumnType($column)->convertToDatabaseValue($value, Rhapsody::getConnection()->getDatabasePlatform());
+        }
+
+        return $databaseData;
     }
 
 
@@ -96,11 +110,6 @@ class Object
     public function set($name, $value)
     {
         $name = Inflector::tableize($name);
-
-        // auto increment
-        if('id' === $name) {
-            return;
-        }
 
         if ($this->hasColumn($name)) {
             $this->data[$name] = $this->getColumnType($name)->convertToPHPValue($value, Rhapsody::getConnection()->getDatabasePlatform());
