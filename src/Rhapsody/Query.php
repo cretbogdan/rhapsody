@@ -127,7 +127,7 @@ class Query
      */
     public function offset($offset)
     {
-        $this->queryBuilder->setFirstResult($limit);
+        $this->queryBuilder->setFirstResult($offset);
 
         return $this;
     }

@@ -26,6 +26,16 @@ class Object
         $this->initialData = $data;
     }
 
+    public function toArray()
+    {
+        $data = array();
+        foreach ($this->getColumnNames() as $column) {
+            $data[$column] = $this->get($column);
+        }
+
+        return $data;
+    }
+
 
     /**
      * Save object to database
@@ -174,8 +184,8 @@ class Object
 
     private function setDefaultValues()
     {
-        foreach ($this->getColumnNames() as $column) {
-            $this->set($column, null);
+        foreach ($this->getColumns() as $column) {
+            $this->set($column->getName(), $column->getDefault());
         }
     }
 
