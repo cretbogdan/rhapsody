@@ -26,6 +26,13 @@ class Object
         $this->initialData = $data;
     }
 
+    public function fromArray(array $data)
+    {
+        foreach ($data as $column => $value) {
+            $this->set($column, $value);
+        }
+    }
+
     public function toArray()
     {
         $data = array();
@@ -45,9 +52,24 @@ class Object
         $databaseData = $this->getDatabaseConvertedData();
 
         if ($this->isNew()) {
+            unset($databaseData['id']);
+
+            if ($this->hasColumn('created_at')) {
+                $databaseData['created_at'] = date('Y-m-d H:i:s');
+            }
+
+            if ($this->hasColumn('updated_at')) {
+                $databaseData['updated_at'] = date('Y-m-d H:i:s');
+            }
+
             Rhapsody::getConnection()->insert($this->table, $databaseData);
             $this->data['id'] = Rhapsody::getConnection()->lastInsertId();
         } elseif ($this->isModified()) {
+            if ($this->hasColumn('updated_at')) {
+                $databaseData['updated_at'] = date('Y-m-d H:i:s');
+            }
+var_dump($databaseData);
+exit;
             Rhapsody::getConnection()->update($this->table, $databaseData, array('id' => $databaseData['id']));
         } else {
             // Nothing modified
@@ -124,7 +146,7 @@ class Object
         if ($this->hasColumn($name)) {
             $this->data[$name] = $this->getColumnType($name)->convertToPHPValue($value, Rhapsody::getConnection()->getDatabasePlatform());
 
-            return;
+            return $this;
         }
 
         throw new \InvalidArgumentException("Column $name does not exist!");
@@ -210,6 +232,23 @@ class Object
     {
         $name = Inflector::tableize($name);
         unset($this->data[$name]);
+    }
+
+    public function __call($name, $arguments)
+    {
+        if (0 === strpos($name, 'set')) {
+            $column = preg_replace('/set/', '', $name, 1);
+
+            return $this->set($column, $arguments);
+        }
+
+        if (0 === strpos($name, 'get')) {
+            $column = preg_replace('/get/', '', $name, 1);
+
+            return $this->get($column);
+        }
+
+        throw new \BadMethodCallException("Method $name does not exist on \Rhapsody\Object");
     }
 
     protected function getTable()
