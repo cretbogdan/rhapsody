@@ -103,8 +103,10 @@ class Query
      *
      * @return Query
      */
-    public function where($sql, array $params = array())
+    public function where($sql, $params = array())
     {
+        $params = (array) $params;
+
         if ($sql) {
             $this->queryBuilder->andWhere($sql);
             foreach ($params as $key => $param) {
