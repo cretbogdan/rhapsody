@@ -6,12 +6,15 @@ use Doctrine\Common\Util\Inflector;
 
 class Object
 {
-    public $table;
     private $data = array();
-    private $initialData = array();
     private $columns;
+    private $isNew = true;
+    private $isModified = false;
+    private $id;
 
-    public function __construct($table = null, array $data = array())
+    public $table;
+
+    public function __construct($table = null, array $data = array(), $isNew = true)
     {
         if ($table) {
             $this->table = $table;
@@ -23,7 +26,7 @@ class Object
             $this->set($column, $value);
         }
 
-        $this->initialData = $data;
+        $this->isNew = $isNew;
     }
 
     public function fromArray(array $data)
@@ -63,17 +66,19 @@ class Object
             }
 
             Rhapsody::getConnection()->insert($this->table, $databaseData);
-            $this->data['id'] = Rhapsody::getConnection()->lastInsertId();
+            $this->data['id'] = (int) Rhapsody::getConnection()->lastInsertId();
         } elseif ($this->isModified()) {
             if ($this->hasColumn('updated_at')) {
                 $databaseData['updated_at'] = date('Y-m-d H:i:s');
             }
-var_dump($databaseData);
-exit;
+
             Rhapsody::getConnection()->update($this->table, $databaseData, array('id' => $databaseData['id']));
         } else {
             // Nothing modified
         }
+
+        $this->isModified = false;
+        $this->isNew = false;
     }
 
 
@@ -106,7 +111,7 @@ exit;
      */
     public function isNew()
     {
-        return empty($this->initialData);
+        return $this->get('id') ? false : true;
     }
 
     /**
@@ -120,17 +125,7 @@ exit;
             return true;
         }
 
-        foreach ($this->data as $column => $value) {
-            if (isset($this->initialData[$column])) {
-                if ($this->initialData[$column] != $value) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->isModified;
     }
 
     /**
@@ -144,7 +139,13 @@ exit;
         $name = Inflector::tableize($name);
 
         if ($this->hasColumn($name)) {
-            $this->data[$name] = $this->getColumnType($name)->convertToPHPValue($value, Rhapsody::getConnection()->getDatabasePlatform());
+            $newValue = $this->getColumnType($name)->convertToPHPValue($value, Rhapsody::getConnection()->getDatabasePlatform());
+
+            if (isset($this->data[$name]) && $newValue != $this->data[$name]) {
+                $this->isModified = true;
+            }
+
+            $this->data[$name] = $newValue;
 
             return $this;
         }

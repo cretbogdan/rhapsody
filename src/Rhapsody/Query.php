@@ -156,7 +156,7 @@ class Query
         $stmt = $this->getSelectBuilder()->execute();
         $data = $stmt->fetch();
 
-        return $data ? Rhapsody::create($this->table, $data) : null;
+        return $data ? Rhapsody::create($this->table, $data, false) : null;
     }
 
     /**
@@ -190,7 +190,7 @@ class Query
     {
         $stmt = $this->getSelectBuilder()->execute();
 
-        return Collection::create($this->table, $stmt->fetchAll());
+        return Collection::create($this->table, $stmt->fetchAll(), false);
     }
 
     /**

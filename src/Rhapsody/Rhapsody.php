@@ -52,7 +52,7 @@ class Rhapsody
     public static function setQueryLogger(SQLLogger $logger = null)
     {
         if (null === $logger) {
-            $logger = new Logger\EchoDebugStack();
+            $logger = new DebugStack();
         }
 
         self::$conn->getConfiguration()->setSQLLogger($logger);

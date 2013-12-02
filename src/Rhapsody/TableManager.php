@@ -14,6 +14,19 @@ class TableManager
         $this->conn = $conn;
     }
 
+    public function getTable($name)
+    {
+        $tables = $this->getSchemaManager()->listTables();
+
+        foreach ($tables as $table) {
+            if ($name == $table->getName()) {
+                return $table;
+            }
+        }
+
+        throw new \InvalidArgumentException("Table $name does not exist!");
+    }
+
     public function getColumns($table)
     {
         if (! isset($this->columns[$table])) {
@@ -23,7 +36,12 @@ class TableManager
         return $this->columns[$table];
     }
 
-    private function getSchemaManager()
+    public function dropTable($name)
+    {
+        $this->getSchemaManager()->dropTable($name);
+    }
+
+    public function getSchemaManager()
     {
         return $this->conn->getSchemaManager();
     }

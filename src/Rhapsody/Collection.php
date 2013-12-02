@@ -14,10 +14,10 @@ class Collection extends BaseCollection
         parent::__construct($data);
     }
 
-    public static function create($table, array $rows = array())
+    public static function create($table, array $rows = array(), $newObjects = true)
     {
         $collection = new static($table);
-        $collection->fromArray($rows);
+        $collection->fromArray($rows, $newObjects);
 
         return $collection;
     }
@@ -40,13 +40,12 @@ class Collection extends BaseCollection
      *
      * @param  array $rows
      */
-    public function fromArray(array $rows)
+    public function fromArray(array $rows, $newObjects = true)
     {
-        $class = Rhapsody::getObjectClass($this->table);
         $objects = array();
 
         foreach ($rows as $row) {
-            $objects[] = new $class($this->table, $row);
+            $objects[] = Rhapsody::create($this->table, $row, $newObjects);
         }
 
         $this->setData($objects);
