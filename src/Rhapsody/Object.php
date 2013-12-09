@@ -240,7 +240,7 @@ class Object
         if (0 === strpos($name, 'set')) {
             $column = preg_replace('/set/', '', $name, 1);
 
-            return $this->set($column, $arguments);
+            return $this->set($column, $arguments[0]);
         }
 
         if (0 === strpos($name, 'get')) {
