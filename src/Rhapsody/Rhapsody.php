@@ -133,7 +133,13 @@ class Rhapsody
      */
     public static function getLastExecutedQuery()
     {
-        return Query::getLastExecutedQuery();
+        $logger = self::$conn->getConfiguration()->getSQLLogger();
+
+        if (! $logger) {
+            throw new \LogicException("SQL Logger is not set!");
+        }
+
+        return end($logger->queries);
     }
 
 
