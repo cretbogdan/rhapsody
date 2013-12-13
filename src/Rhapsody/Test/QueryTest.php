@@ -7,33 +7,36 @@ use Rhapsody\Test\RhapsodyTestCase;
 
 class QueryTest extends RhapsodyTestCase
 {
+    public function setUp()
+    {
+        Rhapsody::query('Author')->truncate();
+        Rhapsody::query('Book')->truncate();
+    }
+
     public function testWhere()
     {
-        $author = Rhapsody::query('Author')->filterByName('')->findOne();
-        // var_dump($author);
+        Rhapsody::create('Author')->setName('Aristotel')->save();
+        $this->assertEquals(1, Rhapsody::query('Author')->filterByName('Aristotel')->count());
 
-        Rhapsody::setup(array(
-            'dbname' => 'australia_oh',
-            'user' => 'root',
-            'password' => '123456',
-            'host' => 'localhost',
-            'driver' => 'pdo_mysql'
-        ));
+        $aristotel = Rhapsody::query('Author')->filterByName('Aristotel')->findOne();
+        $this->assertNotNull($aristotel);
 
-        Rhapsody::setQueryLogger();
+        $author = Rhapsody::query('Author')->filterByName('Plato')->findOne();
+        $this->assertNull($author);
 
-        $preshop = Rhapsody::create('preshop');
-        $preshop->name = "Cuisine Courier";
-        $preshop->address = null;
-        $preshop->postcode = 3065;
+        $book = Rhapsody::create('Book')->setAuthorId($aristotel->id)->setName('Rhetoric')->save();
 
-        $shop = Rhapsody::query('Shop')
-            ->filterByName($preshop->name)
-            ->filterByAddress($preshop->address)
-            ->filterByPostcode($preshop->postcode)
-            ->findOne();
+        $author = $book->author;
+        $this->assertNotNull($author);
+        $this->assertEquals($author->id, $aristotel->id);
 
-        print_r(Rhapsody::getLastExecutedQuery());
+
+
+
+        // $books = $aristotel->books;
+        // echo Rhapsody::getTotalQueries();
+
+        // $author = Rhapsody::query('Author')->filterByName('')->findOne();
 
     }
 }

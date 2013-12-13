@@ -27,6 +27,11 @@ class TableManager
         throw new \InvalidArgumentException("Table $name does not exist!");
     }
 
+    public function tablesExist($tableNames)
+    {
+        return $this->getSchemaManager()->tablesExist($tableNames);
+    }
+
     public function getColumns($table)
     {
         if (! isset($this->columns[$table])) {

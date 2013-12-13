@@ -2,22 +2,22 @@
 
 namespace Rhapsody;
 
-use Rhapsody\Base\Collection as BaseCollection;
+use Doctrine\Common\Collections\ArrayCollection as BaseCollection;
 
 class Collection extends BaseCollection
 {
     private $table;
 
-    public function __construct($table = null, array $data = array())
+    public function __construct($table = null, array $elements = array())
     {
         $this->table = $table;
-        parent::__construct($data);
+        parent::__construct($elements);
     }
 
-    public static function create($table, array $rows = array(), $newObjects = true)
+    public static function create($table, array $elements = array(), $isNew = true)
     {
         $collection = new static($table);
-        $collection->fromArray($rows, $newObjects);
+        $collection->fromArray($elements, $isNew);
 
         return $collection;
     }
@@ -28,7 +28,7 @@ class Collection extends BaseCollection
     public function save()
     {
         Rhapsody::getConnection()->beginTransaction();
-        foreach ($this->getData() as $object) {
+        foreach ($this->toArray() as $object) {
             $object->save();
         }
         Rhapsody::getConnection()->commit();
@@ -40,15 +40,13 @@ class Collection extends BaseCollection
      *
      * @param  array $rows
      */
-    public function fromArray(array $rows, $newObjects = true)
+    public function fromArray(array $rows, $isNew = true)
     {
-        $objects = array();
+        $this->clear();
 
         foreach ($rows as $row) {
-            $objects[] = Rhapsody::create($this->table, $row, $newObjects);
+            $this->add(Rhapsody::create($this->table, $row, $isNew));
         }
-
-        $this->setData($objects);
     }
 
     /**
@@ -71,4 +69,12 @@ class Collection extends BaseCollection
         return $this->table;
     }
 
+    public function remove($key)
+    {
+        if ($key instanceof Object) {
+            return $this->removeElement($key);
+        }
+
+        return parent::remove($key);
+    }
 }

@@ -9,6 +9,7 @@ class ObjectTest extends RhapsodyTestCase
     public function setUp()
     {
         Rhapsody::query('Author')->truncate();
+        Rhapsody::query('Book')->truncate();
     }
 
     public function testCreation()
@@ -29,17 +30,16 @@ class ObjectTest extends RhapsodyTestCase
         $this->assertNotNull($author->id);
         $this->assertTrue(is_int($author->id));
 
-        $logger = $conn->getConfiguration()->getSQLLogger();
-        $queryTotal = $logger->currentQuery;
+        $totalQueries = Rhapsody::getTotalQueries();
 
         $author->save();
-        $this->assertEquals($queryTotal, $logger->currentQuery);
+        $this->assertEquals($totalQueries, Rhapsody::getTotalQueries());
 
         $author->save();
-        $this->assertEquals($queryTotal, $logger->currentQuery);
+        $this->assertEquals($totalQueries, Rhapsody::getTotalQueries());
 
         $author->save();
-        $this->assertEquals($queryTotal, $logger->currentQuery);
+        $this->assertEquals($totalQueries, Rhapsody::getTotalQueries());
         $this->assertFalse($author->isModified());
 
         $author->name = 'Plato';
@@ -64,5 +64,34 @@ class ObjectTest extends RhapsodyTestCase
             $this->assertFalse($author->isNew());
             $this->assertFalse($author->isModified());
         }
+    }
+
+
+    public function testParent()
+    {
+        $author = Rhapsody::create('Author')->setName('Aristotel');
+        $author->save();
+        $book = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author)->save();
+        $this->assertEquals($book->authorId, $author->id);
+
+        $author = Rhapsody::create('Author')->setName('Plato');
+        $book = Rhapsody::create('Book')->setName('Republic')->setAuthor($author)->save();
+        $this->assertEquals($book->authorId, $author->id);
+    }
+
+
+    public function testChildren()
+    {
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
+        $book = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author)->save();
+
+        $books = $author->books;
+        $this->assertEquals(1, $books->count());
+        $this->assertEquals($book->id, $books->first()->id);
+
+        $otherAuthor = Rhapsody::create('Author')->setName('Montaigne')->save();
+        $otherAuthor->setBooks($books);
+        $this->assertEquals(0, $books->count());
+        $this->assertEquals(1, $otherAuthor->books->count());
     }
 }

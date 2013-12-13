@@ -7,10 +7,11 @@ use Doctrine\Common\Util\Inflector;
 class Object
 {
     private $data = array();
+    private $parents = array();
+    private $children = array();
     private $columns;
     private $isNew = true;
     private $isModified = false;
-    private $id;
 
     public $table;
 
@@ -77,8 +78,20 @@ class Object
             // Nothing modified
         }
 
+        foreach ($this->children as $tableName => $children) {
+            unset($this->children[$tableName]);
+            $children->save();
+        }
+
+        foreach ($this->parents as $tableName => $parent) {
+            unset($this->parents[$tableName]);
+            $parent->save();
+        }
+
         $this->isModified = false;
         $this->isNew = false;
+
+        return $this;
     }
 
 
@@ -150,6 +163,18 @@ class Object
             return $this;
         }
 
+        if ($this->hasParent($name)) {
+            $this->setParent($name, $value);
+
+            return $this;
+        }
+
+        if ($this->hasChildren($name)) {
+            $this->setChildren($name, $value);
+
+            return $this;
+        }
+
         throw new \InvalidArgumentException("Column $name does not exist!");
     }
 
@@ -167,13 +192,180 @@ class Object
             return $this->data[$name];
         }
 
+        if ($this->hasParent($name)) {
+            return $this->getParent($name);
+        }
+
+        if ($this->hasChildren($name)) {
+            return $this->getChildren($name);
+        }
+
         throw new \InvalidArgumentException('Undefined field or relation object '.$name);
     }
+
+    public function getParent($table)
+    {
+        $table = Inflector::tableize($table);
+        $this->validateParent($table);
+        $columnName = $this->getParentColumnName($table);
+
+        if (! isset($this->parents[$columnName])) {
+            $this->parents[$columnName] = Rhapsody::query($table)->filterById($this->get($columnName))->findOne();
+        }
+
+        return $this->parents[$columnName];
+    }
+
+    public function setParent($table, Object $object)
+    {
+        $table = Inflector::tableize($table);
+        $this->validateParent($table);
+        $columnName = $this->getParentColumnName($table);
+
+        if ($table != $object->getTable()) {
+            throw new \UnexpectedValueException("Expected table '$table' for Rhapsody\Object::setParent(). Table '".$object->getTable()."' given!");
+        }
+
+        if ($object->isNew()) {
+            $object->save();
+        }
+
+        $this->parents[$columnName] = $object;
+        $this->set($columnName, $object->id);
+
+        return $this;
+    }
+
+    protected function validateParent($table)
+    {
+        if (! $this->hasParent($table)) {
+            throw new \InvalidArgumentException(sprintf("Cannot get parent for table '$table'. Column '%' does not exist!", $this->getParentColumnName($table)));
+        }
+    }
+
+    public function hasParent($table)
+    {
+        return $this->hasColumn($this->getParentColumnName($table));
+    }
+
+    public function getParentColumnName($table)
+    {
+        $table = Inflector::tableize($table);
+
+        return $table.'_id';
+    }
+
+
+
+
+
+
+
+
+
+
+    public function getChildren($table)
+    {
+        $table = Inflector::tableize($table);
+        $this->validateChildren($table);
+        $tableName = $this->getChildrenTableName($table);
+
+        if (! isset($this->children[$tableName])) {
+            $this->children[$tableName] = Rhapsody::query($tableName)->filterBy($this->getTable().'_id', $this->id)->find();
+        }
+
+        return $this->children[$tableName];
+    }
+
+    public function setChildren($table, Collection $children)
+    {
+        $table = Inflector::tableize($table);
+        $this->validateChildren($table);
+        $tableName = $this->getChildrenTableName($table);
+
+        if ($tableName != $children->getTable()) {
+            throw new \UnexpectedValueException("Expected table '$tableName' for Rhapsody\Object::setChildren(). Table '".$children->getTable()."' given!");
+        }
+
+        $currentChildren = $this->getChildren($table);
+
+        foreach ($currentChildren as $child) {
+            $currentChildren->remove($child);
+        }
+
+        foreach ($children as $child) {
+            $currentChildren->add($child);
+            $children->remove($child);
+
+            $child->set($this->getChildrenTableIdentifierColumnName(), $this->id);
+            $child->setParent($this->getTable(), $this);
+        }
+
+        if ($this->isNew()) {
+            $this->save(); // id needed
+        }
+
+        return $this;
+    }
+
+    protected function validateChildren($table)
+    {
+        if (! $this->hasChildren($table)) {
+            throw new \InvalidArgumentException(sprintf("Cannot get children '%s' for table '$table'!", $this->getChildrenTableName($table)));
+        }
+    }
+
+    public function hasChildren($table)
+    {
+        $table = Inflector::tableize($table);
+        $table = substr($table, 0, -1);
+
+        if (! Rhapsody::getTableManager()->tablesExist($table)) {
+            return false;
+        }
+
+        $table = Rhapsody::getTableManager()->getTable($table);
+        if (! $table->hasColumn($this->getChildrenTableIdentifierColumnName())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function getChildrenTableName($table)
+    {
+        $table = Inflector::tableize($table);
+
+        return substr($table, 0, -1);
+    }
+
+    public function getChildrenTableIdentifierColumnName()
+    {
+        return $this->getTable().'_id';
+    }
+
+
+
+
+
+
+
+
+
 
     public function has($name)
     {
         $name = Inflector::tableize($name);
-        return isset($this->data[$name]);
+
+        if (isset($this->data[$name])) {
+            return true;
+        }
+
+        if ($this->hasParent($name)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function hasColumn($name)
@@ -252,7 +444,7 @@ class Object
         throw new \BadMethodCallException("Method $name does not exist on \Rhapsody\Object");
     }
 
-    protected function getTable()
+    public function getTable()
     {
         return $this->table;
     }

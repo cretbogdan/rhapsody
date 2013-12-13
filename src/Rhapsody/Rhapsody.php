@@ -136,10 +136,27 @@ class Rhapsody
         $logger = self::$conn->getConfiguration()->getSQLLogger();
 
         if (! $logger) {
-            throw new \LogicException("SQL Logger is not set!");
+            throw new \LogicException("No SQL Logger is enabled!");
         }
 
         return end($logger->queries);
+    }
+
+
+    /**
+     * Get total number of queries
+     *
+     * @return int
+     */
+    public static function getTotalQueries()
+    {
+        $logger = self::$conn->getConfiguration()->getSQLLogger();
+
+        if (! $logger) {
+            throw new \LogicException("No SQL Logger is enabled!");
+        }
+
+        return $logger->currentQuery;
     }
 
 
