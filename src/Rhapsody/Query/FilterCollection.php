@@ -2,13 +2,13 @@
 
 namespace Rhapsody\Query;
 
-use Rhapsody\Base\Collection;
+use Rhapsody\Collection;
 
 class FilterCollection extends Collection
 {
     public function getFilters()
     {
-        return $this->getData();
+        return $this->getElements();
     }
 
     public function getSql()

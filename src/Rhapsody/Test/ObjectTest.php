@@ -93,5 +93,7 @@ class ObjectTest extends RhapsodyTestCase
         $otherAuthor->setBooks($books);
         $this->assertEquals(0, $books->count());
         $this->assertEquals(1, $otherAuthor->books->count());
+
+        var_dump($books == $otherAuthor->books);
     }
 }

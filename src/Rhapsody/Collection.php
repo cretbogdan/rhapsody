@@ -2,9 +2,9 @@
 
 namespace Rhapsody;
 
-use Doctrine\Common\Collections\ArrayCollection as BaseCollection;
+use Doctrine\Common\Collections\ArrayCollection;
 
-class Collection extends BaseCollection
+class Collection extends ArrayCollection
 {
     private $table;
 
@@ -20,6 +20,11 @@ class Collection extends BaseCollection
         $collection->fromArray($elements, $isNew);
 
         return $collection;
+    }
+
+    public function getElements()
+    {
+        return $this->toArray();
     }
 
     /**
