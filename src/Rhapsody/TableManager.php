@@ -32,6 +32,11 @@ class TableManager
         return $this->getSchemaManager()->tablesExist($tableNames);
     }
 
+    public function hasColumn($table, $column)
+    {
+        return in_array($column, array_keys($this->getColumns($table)));
+    }
+
     public function getColumns($table)
     {
         if (! isset($this->columns[$table])) {

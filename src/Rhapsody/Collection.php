@@ -22,23 +22,42 @@ class Collection extends ArrayCollection
         return $collection;
     }
 
-    public function getElements()
-    {
-        return $this->toArray();
-    }
-
     /**
      * Save all objects to database
      */
     public function save()
     {
         Rhapsody::getConnection()->beginTransaction();
-        foreach ($this->toArray() as $object) {
+        foreach ($this->getObjects() as $object) {
             $object->save();
         }
         Rhapsody::getConnection()->commit();
     }
 
+
+    public function delete()
+    {
+        Rhapsody::getConnection()->beginTransaction();
+        foreach ($this->getObjects() as $object) {
+            $object->delete();
+        }
+        Rhapsody::getConnection()->commit();
+    }
+
+    public function toColumnValues($column)
+    {
+        if (! Rhapsody::getTableManager()->hasColumn($this->getTable(), $column)) {
+            throw new \InvalidArgumentException("Table '$this->table' does not have column '$column'!");
+        }
+
+        $result = array();
+
+        foreach ($this->getObjects() as $object) {
+            $result[] = $object->get($column);
+        }
+
+        return $result;
+    }
 
     /**
      * Populate the data from array
@@ -48,9 +67,17 @@ class Collection extends ArrayCollection
     public function fromArray(array $rows, $isNew = true)
     {
         $this->clear();
+        $cache = Rhapsody::getObjectCache();
 
         foreach ($rows as $row) {
-            $this->add(Rhapsody::create($this->table, $row, $isNew));
+            if (isset($row['id']) && $cache->containsObject($row['id'], $this->table)) {
+                $object = $cache->fetchObject($row['id'], $this->table);
+            } else {
+                $object = Rhapsody::create($this->table, $row, $isNew);
+                $cache->saveObject($object);
+            }
+
+            $this->add($object);
         }
     }
 
@@ -62,6 +89,28 @@ class Collection extends ArrayCollection
     public function setTable($table)
     {
         $this->table = $table;
+    }
+
+    public function containsObjectId($object)
+    {
+        $id = $object instanceof Object ? $object->get('id') : $object;
+
+        return in_array($id, $this->toColumnValues('id'));
+    }
+
+    public function findById($object)
+    {
+        if (! $this->containsObjectId($object)) {
+            return null;
+        }
+
+        $id = $object instanceof Object ? $object->get('id') : $object;
+
+        foreach ($this->getObjects() as $collectionObject) {
+            if ($id == $collectionObject->id) {
+                return $collectionObject;
+            }
+        }
     }
 
     /**
@@ -77,7 +126,7 @@ class Collection extends ArrayCollection
     public function remove($key)
     {
         if ($key instanceof Object) {
-            return $this->removeElement($key);
+            return $this->removeElement($this->findById($key));
         }
 
         return parent::remove($key);

@@ -158,7 +158,19 @@ class Query
         $stmt = $this->getSelectBuilder()->execute();
         $data = $stmt->fetch();
 
-        return $data ? Rhapsody::create($this->table, $data, false) : null;
+        $object = null;
+
+        if ($data) {
+            $cache = Rhapsody::getObjectCache();
+            $object = $cache->fetchObject($data['id'], $this->table);
+
+            if (! $object) {
+                $object = Rhapsody::create($this->table, $data, false);
+                $cache->saveObject($object);
+            }
+        }
+
+        return $object;
     }
 
     /**
@@ -166,7 +178,7 @@ class Query
      *
      * @param boolean $save Save newly created object
      *
-     * @return Object/null
+     * @return Object|null
      */
     public function findOneOrCreate()
     {

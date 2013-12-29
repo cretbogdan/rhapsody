@@ -16,10 +16,8 @@ Rhapsody::setup(array(
     'driver' => 'pdo_mysql'
 ));
 
-Rhapsody::setQueryLogger();
-
+Rhapsody::enableQueryLogger();
 $conn = Rhapsody::getConnection();
-
 
 $sql = 'CREATE TABLE IF NOT EXISTS `author` (
      `id` int(11) NOT NULL AUTO_INCREMENT,

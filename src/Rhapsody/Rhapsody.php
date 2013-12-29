@@ -12,6 +12,7 @@ class Rhapsody
     private static $conn;
     private static $tableManager;
     private static $modelFormatter;
+    private static $objectCache;
 
     /**
      * Setup connection.
@@ -48,16 +49,20 @@ class Rhapsody
         }
     }
 
-
     public static function setQueryLogger(SQLLogger $logger = null)
     {
-        if (null === $logger) {
-            $logger = new DebugStack();
-        }
-
         self::$conn->getConfiguration()->setSQLLogger($logger);
     }
 
+    public static function enableQueryLogger()
+    {
+        self::setQueryLogger(new DebugStack());
+    }
+
+    public static function disableQueryLogger()
+    {
+        self::setQueryLogger(null);
+    }
 
     /**
      * Set the model formatter for extending base classes
@@ -69,7 +74,6 @@ class Rhapsody
         self::$modelFormatter = $string;
     }
 
-
     /**
      * Create a new record object for given object
      *
@@ -80,11 +84,18 @@ class Rhapsody
      */
     public static function create($table, array $data = array())
     {
-        $class = self::getObjectClass($table);
+        $cache = self::getObjectCache();
 
-        return new $class(Inflector::tableize($table), $data);
+        if (isset($data['id']) && $cache->containsObject($data['id'], $table)) {
+            $object = $cache->fetchObject($data['id'], $table);
+        } else {
+            $class = self::getObjectClass($table);
+            $object = new $class(Inflector::tableize($table), $data);
+            $cache->saveObject($object);
+        }
+
+        return $object;
     }
-
 
     /**
      * Create an instance of a query class for given table
@@ -98,7 +109,6 @@ class Rhapsody
         return Query::create($table);
     }
 
-
     public static function getTableManager()
     {
         if (null == self::$tableManager) {
@@ -108,12 +118,19 @@ class Rhapsody
         return self::$tableManager;
     }
 
+    public static function getObjectCache()
+    {
+        if (null == self::$objectCache) {
+            self::$objectCache = new ObjectCache();
+        }
+
+        return self::$objectCache;
+    }
 
     public static function setConnection(Connection $conn)
     {
         self::$conn = $conn;
     }
-
 
     /**
      * Return the doctrine connection
@@ -125,7 +142,6 @@ class Rhapsody
         return self::$conn;
     }
 
-
     /**
      * Get last executed query
      *
@@ -136,12 +152,11 @@ class Rhapsody
         $logger = self::$conn->getConfiguration()->getSQLLogger();
 
         if (! $logger) {
-            throw new \LogicException("No SQL Logger is enabled!");
+            throw new RhapsodyException("No SQL Logger is enabled!");
         }
 
         return end($logger->queries);
     }
-
 
     /**
      * Get total number of queries
@@ -153,12 +168,11 @@ class Rhapsody
         $logger = self::$conn->getConfiguration()->getSQLLogger();
 
         if (! $logger) {
-            throw new \LogicException("No SQL Logger is enabled!");
+            throw new RhapsodyException("No SQL Logger is enabled!");
         }
 
         return $logger->currentQuery;
     }
-
 
     /**
      * Get the object class for a given table
@@ -169,19 +183,18 @@ class Rhapsody
      */
     public static function getObjectClass($table)
     {
+        $objectClass = self::getDefaultObjectClass();
+
         if (self::$modelFormatter) {
             $class = self::$modelFormatter.'\\'.Inflector::classify($table);
 
             if (class_exists($class)) {
-                return $class;
-            } else {
-                return self::getDefaultObjectClass();
+                $objectClass = $class;
             }
-        } else {
-            return self::getDefaultObjectClass();
         }
-    }
 
+        return $objectClass;
+    }
 
     /**
      * Get the query class for a given table
@@ -192,19 +205,18 @@ class Rhapsody
      */
     public static function getQueryClass($table)
     {
+        $queryClass = '\Rhapsody\Query';
+
         if (self::$modelFormatter) {
             $class = self::$modelFormatter.'\\'.Inflector::classify($table.'Query');
 
             if (class_exists($class)) {
-                return $class;
-            } else {
-                return '\Rhapsody\Query';
+                $queryClass = $class;
             }
-        } else {
-            return '\Rhapsody\Query';
         }
-    }
 
+        return $queryClass;
+    }
 
     /**
      * Get the default object class

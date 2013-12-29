@@ -8,7 +8,7 @@ class FilterCollection extends Collection
 {
     public function getFilters()
     {
-        return $this->getElements();
+        return $this->getObjects();
     }
 
     public function getSql()

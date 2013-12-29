@@ -66,19 +66,32 @@ class ObjectTest extends RhapsodyTestCase
         }
     }
 
-
     public function testParent()
     {
-        $author = Rhapsody::create('Author')->setName('Aristotel');
-        $author->save();
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
         $book = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author)->save();
         $this->assertEquals($book->authorId, $author->id);
 
         $author = Rhapsody::create('Author')->setName('Plato');
+        $this->assertTrue($author->isModified());
         $book = Rhapsody::create('Book')->setName('Republic')->setAuthor($author)->save();
         $this->assertEquals($book->authorId, $author->id);
+        $this->assertFalse($author->isModified());
+        $this->assertNotNull($book->author);
     }
 
+    public function testObjectCache()
+    {
+        $cache = Rhapsody::getObjectCache();
+
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
+        $this->assertTrue($cache->containsObject(1, 'author'));
+
+        $book = Rhapsody::create('Book')->setName('Rhetoric')->setAuthorId($author->id)->save();
+        $this->assertTrue($cache->containsObject(1, 'book'));
+        $this->assertSame($author, $book->author);
+        $this->assertSame($author->books->first(), $book);
+    }
 
     public function testChildren()
     {
@@ -89,11 +102,62 @@ class ObjectTest extends RhapsodyTestCase
         $this->assertEquals(1, $books->count());
         $this->assertEquals($book->id, $books->first()->id);
 
-        $otherAuthor = Rhapsody::create('Author')->setName('Montaigne')->save();
-        $otherAuthor->setBooks($books);
+        $montaigne = Rhapsody::create('Author')->setName('Montaigne')->save();
+        $montaigne->setBooks($books);
         $this->assertEquals(0, $books->count());
-        $this->assertEquals(1, $otherAuthor->books->count());
+        $this->assertEquals(1, $montaigne->books->count());
+        $this->assertFalse($books == $montaigne->books);
+    }
 
-        var_dump($books == $otherAuthor->books);
+    public function testChildrenRemoveAdd()
+    {
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
+        $book = Rhapsody::create('Book')->setName('Unknown')->setAuthor($author)->save();
+
+        $this->assertEquals(1, $author->books->count());
+        $poetics = Rhapsody::create('Book')->setName('Poetics');
+
+        $author->addBook($poetics);
+        $this->assertEquals(2, $author->books->count());
+
+        $author->removeBook($poetics);
+        $this->assertEquals(1, $author->books->count());
+
+        $author->removeBook($book);
+        $this->assertEquals(0, $author->books->count());
+
+        $author->save();
+        $this->assertEquals(0, $author->books->count());
+    }
+
+    public function testChildrenAddRemove()
+    {
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
+        $montaigne = Rhapsody::create('Author')->setName('Montaigne')->save();
+
+        $book = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author)->save();
+        $unknownBook = Rhapsody::create('Book')->setName('Unknown')->setAuthor($author)->save();
+
+        $montaigne->addBook($unknownBook);
+        $this->assertEquals(1, $author->books->count());
+        $this->assertEquals(1, $montaigne->books->count());
+
+        $author->save();
+        $this->assertEquals(1, $author->books->count());
+        $this->assertEquals(1, $montaigne->books->count());
+
+        $montaigne->save();
+        $this->assertEquals(1, $author->books->count());
+        $this->assertEquals(1, $montaigne->books->count());
+
+        $author->removeBook($book);
+        $this->assertEquals(0, $author->books->count());
+        $this->assertNull($book->authorId);
+        $this->assertNull($book->author);
+    }
+
+    public function testCrossReferencedObjects()
+    {
+
     }
 }
