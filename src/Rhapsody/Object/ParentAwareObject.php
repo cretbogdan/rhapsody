@@ -62,6 +62,15 @@ class ParentAwareObject extends BaseObject
         return $this->hasColumn($this->getParentColumnName($table));
     }
 
+    public function clearParent($table)
+    {
+        $this->validateParent($table);
+
+        if (isset($this->parents[$table])) {
+            unset($this->parents[$table]);
+        }
+    }
+
     /**
      * Get the parent object of a table.
      *
@@ -127,7 +136,7 @@ class ParentAwareObject extends BaseObject
         $this->validateParent($table);
         $columnName = $this->getParentColumnName($table);
 
-        unset($this->parents[$table]);
+        $this->clearParent($table);
         $this->set($columnName, null);
 
         return $this;

@@ -97,6 +97,11 @@ class Rhapsody
         return $object;
     }
 
+    public static function createCollection($table, array $rows = array(), $isNew = true)
+    {
+        return Collection::create($table, $rows, $isNew);
+    }
+
     /**
      * Create an instance of a query class for given table
      *

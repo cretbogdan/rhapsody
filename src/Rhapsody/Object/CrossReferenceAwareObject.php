@@ -3,21 +3,14 @@
 namespace Rhapsody\Object;
 
 use Doctrine\Common\Util\Inflector;
+use Rhapsody;
+use Rhapsody\RhapsodyException;
+use Rhapsody\Object;
 
 class CrossReferenceAwareObject extends ChildrenAwareObject
 {
     private $foreignObjects = array();
     private $referenceObjects = array();
-
-    // public function save()
-    // {
-    //     foreach ($this->children as $tableName => $children) {
-    //         unset($this->children[$tableName]);
-    //         $children->save();
-    //     }
-
-    //     return parent::save();
-    // }
 
     public function has($name)
     {
@@ -37,7 +30,7 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
                 throw $exception;
             }
 
-            return $this->getCrossReferenceObjects($name);
+            return $this->getForeignObjects($name);
         }
     }
 
@@ -65,7 +58,117 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
      */
     public function hasCrossReferenceObjects($table)
     {
-        return $this->getReferenceTableName($table) ? true : false;
+        $referenceTable = $this->getReferenceTable($table);
+
+        return $referenceTable ? true : false;
+    }
+
+    public function getReferenceObjects($table)
+    {
+        $this->validateCrossReferenceTable($table);
+        $table = $this->getReferenceTable($table);
+
+        if (! isset($this->referenceObjects[$table])) {
+            $this->referenceObjects[$table] = Rhapsody::query($table)->filterBy($this->getTable().'_id', $this->id)->find();
+        }
+
+        return $this->referenceObjects[$table];
+    }
+
+    public function getForeignObjects($table)
+    {
+        $this->validateCrossReferenceTable($table);
+        $foreignTable = $this->cleanTableName($table);
+
+        if (! isset($this->foreignObjects[$foreignTable])) {
+            $this->foreignObjects[$foreignTable] = Rhapsody::createCollection($foreignTable);
+
+            $referenceObjectIds = $this->getReferenceObjects($table)->toColumnValues('id');
+            $referenceObjectIds = array_filter($referenceObjectIds);
+
+            if (! empty($referenceObjectIds)) {
+                $foreignObjects = Rhapsody::query($foreignTable)->filterById($referenceObjectIds, 'in')->find();
+                foreach ($foreignObjects as $foreignObject) {
+                    $this->foreignObjects[$foreignTable]->add($foreignObject);
+                }
+            }
+        }
+
+        return $this->foreignObjects[$foreignTable];
+    }
+
+    public function removeForeignObject(Object $object)
+    {
+        $this->validateCrossReferenceTable($object->getTable());
+        $referenceObjects = $this->getReferenceObjects($object->getTable());
+
+        foreach ($referenceObjects as $referenceObject) {
+            if ($referenceObject->get($this->getTable().'_id') == $this->id) {
+                $referenceObjects->remove($referenceObject);
+
+                if ($referenceObject->isNew()) {
+                    $this->removeObjectSave($referenceObject);
+                } else {
+                    $this->addObjectDelete($referenceObject);
+                }
+
+                $this->isModified = true;
+                break;
+            }
+        }
+
+        $foreignObjects = $this->getForeignObjects($object->getTable());
+        $foreignObjects->remove($object);
+
+        return $this;
+    }
+
+    public function addForeignObject(Object $object)
+    {
+        $this->validateCrossReferenceTable($object->getTable());
+        $referenceObjects = $this->getReferenceObjects($object->getTable());
+
+        if ($this->isNew()) {
+            $this->save();
+        }
+
+        if ($object->isNew()) {
+            $object->save();
+        }
+
+        $create = true;
+        foreach ($referenceObjects as $referenceObject) {
+            if ($referenceObject->get($this->getTable().'_id') == $this->id
+                && $referenceObject->get($object->getTable().'_id') == $object->id) {
+                $create = false;
+                break;
+            }
+        }
+
+        if ($create) {
+            $referenceObject = Rhapsody::create($this->getReferenceTable($object->getTable()))
+                ->set($this->getTable().'_id', $this->id)
+                ->set($object->getTable().'_id', $object->id);
+
+            $referenceObjects->add($referenceObject);
+
+            $this->addObjectSave($referenceObject);
+            $this->isModified = true;
+        }
+
+        $foreignObjects = $this->getForeignObjects($object->getTable());
+        if (! $foreignObjects->contains($object)) {
+            $foreignObjects->add($object);
+        }
+
+        return $this;
+    }
+
+    private function validateCrossReferenceTable($table)
+    {
+        if (! $this->hasCrossReferenceObjects($table)) {
+            throw new RhapsodyException("Table \"$table\" has no relation with ".$this->getTable());
+        }
     }
 
     // public function getCrossReferenceObjects($table)
@@ -132,32 +235,36 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
     //     }
     // }
 
+    public function getReferenceTable($table)
+    {
+        $manager = Rhapsody::getTableManager();
+        $table = $this->cleanTableName($table);
 
-    // private function getReferencedForeignTableName($table)
-    // {
-    //     $table = Inflector::tableize($table);
-    //     if ('s' === substr($table, -1)) {
-    //         $table = substr($table, 0, -1);
-    //     }
+        $referenceTable = $this->table.'_'.$table;
 
-    //     return $table;
-    // }
+        if ($manager->tablesExist($referenceTable)) {
+            if ($manager->hasColumn($referenceTable, $table.'_id') && $manager->hasColumn($referenceTable, $this->getTable().'_id')) {
+                return $referenceTable;
+            }
+        }
 
+        $referenceTable = $table.'_'.$this->table;
+        if ($manager->tablesExist($referenceTable)) {
+            if ($manager->hasColumn($referenceTable, $table.'_id') && $manager->hasColumn($referenceTable, $this->getTable().'_id')) {
+                return $referenceTable;
+            }
+        }
 
-    // public function getReferenceTableName($table)
-    // {
-    //     $table = $this->getReferencedForeignTableName($table);
-    //     $referenceTable = $this->table.'_'.$table;
+        return null;
+    }
 
-    //     if (Rhapsody::getTableManager()->tablesExist($referenceTable)) {
-    //         return $referenceTable;
-    //     }
+    private function cleanTableName($table)
+    {
+        $table = Inflector::tableize($table);
+        if ('s' === substr($table, -1)) {
+            $table = substr($table, 0, -1);
+        }
 
-    //     $referenceTable = $table.'_'.$this->table;
-    //     if (Rhapsody::getTableManager()->tablesExist($referenceTable)) {
-    //         return $referenceTable;
-    //     }
-
-    //     return null;
-    // }
+        return $table;
+    }
 }

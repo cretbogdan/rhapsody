@@ -137,6 +137,7 @@ class ChildrenAwareObject extends ParentAwareObject
     {
         $this->getChildren($child->getTable())->remove($child);
         $child->set($this->getChildrenColumn(), null);
+        $child->clearParent($this->getTable());
 
         if ($child->isNew()) {
             $this->removeObjectSave($child);

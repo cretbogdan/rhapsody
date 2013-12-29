@@ -99,22 +99,24 @@ class Query
      * Add a where condition
      *
      * @param  string $sql
-     * @param  string/array $params
+     * @param  string|array $params
      *
      * @return Query
      */
     public function where($sql, $params = array())
     {
-        $params = (array) $params;
+        if (! $sql) {
+            return $this;
+        }
 
-        if ($sql) {
-            $this->queryBuilder->andWhere($sql);
-            foreach ($params as $key => $param) {
-                if (is_int($key)) {
-                    $this->queryBuilder->createPositionalParameter($param);
-                } else {
-                    $this->queryBuilder->setParameter($key, $param);
-                }
+        $this->queryBuilder->andWhere($sql);
+
+        $params = (array) $params;
+        foreach ($params as $key => $param) {
+            if (is_int($key)) {
+                $this->queryBuilder->createPositionalParameter($param);
+            } else {
+                $this->queryBuilder->setParameter($key, $param);
             }
         }
 

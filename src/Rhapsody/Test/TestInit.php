@@ -46,8 +46,10 @@ $sql = 'CREATE TABLE IF NOT EXISTS `tag` (
 $conn->executeUpdate($sql);
 
 $sql = 'CREATE TABLE IF NOT EXISTS `book_tag` (
+ `id` int(11) NOT NULL AUTO_INCREMENT,
  `book_id` int(11) NOT NULL,
  `tag_id` int(11) NOT NULL,
+ PRIMARY KEY (`id`),
  KEY `book_id` (`book_id`,`tag_id`),
  KEY `book_id_2` (`book_id`),
  KEY `tag_id` (`tag_id`)

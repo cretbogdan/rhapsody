@@ -10,6 +10,8 @@ class ObjectTest extends RhapsodyTestCase
     {
         Rhapsody::query('Author')->truncate();
         Rhapsody::query('Book')->truncate();
+        Rhapsody::query('Tag')->truncate();
+        Rhapsody::query('BookTag')->truncate();
     }
 
     public function testCreation()
@@ -136,9 +138,9 @@ class ObjectTest extends RhapsodyTestCase
         $montaigne = Rhapsody::create('Author')->setName('Montaigne')->save();
 
         $book = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author)->save();
-        $unknownBook = Rhapsody::create('Book')->setName('Unknown')->setAuthor($author)->save();
+        $essays = Rhapsody::create('Book')->setName('Essays')->setAuthor($author)->save();
 
-        $montaigne->addBook($unknownBook);
+        $montaigne->addBook($essays);
         $this->assertEquals(1, $author->books->count());
         $this->assertEquals(1, $montaigne->books->count());
 
@@ -158,6 +160,17 @@ class ObjectTest extends RhapsodyTestCase
 
     public function testCrossReferencedObjects()
     {
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
+        $rhetoric = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author);
+        $rhetoricTag = Rhapsody::create('Tag')->setName('Rhetoric');
 
+        $rhetoric->addTag($rhetoricTag);
+        $this->assertEquals(1, $rhetoric->tags->count());
+        $this->assertSame($rhetoricTag, $rhetoric->tags->first());
+        $rhetoric->save();
+
+        $rhetoric->removeTag($rhetoricTag);
+        $this->assertEquals(0, $rhetoric->tags->count());
+        $rhetoric->save();
     }
 }

@@ -13,8 +13,8 @@ class BaseObject
     private $crossReferenceObjects = array();
     private $toDelete = array(); // to delete objects on save
     public $toSave = array(); // to delete objects on save
-    private $isNew = true;
-    private $isModified = false;
+    protected $isNew = true;
+    protected $isModified = false;
 
     public $table;
 
@@ -46,8 +46,6 @@ class BaseObject
         $this->toDelete = array();
 
         foreach ($this->toSave as $object) {
-// echo "Saving toSave object $object->name \n";
-// if ($object->hasColumn('author_id')) echo $object->authorId."\n";
             $object->save();
         }
 
@@ -55,6 +53,17 @@ class BaseObject
 
         $this->isModified = false;
         $this->isNew = false;
+
+        return $this;
+    }
+
+    public function delete()
+    {
+        if ($this->isNew()) {
+            return $this;
+        }
+
+        Rhapsody::getConnection()->delete($this->getTable(), array('id' => $this->id));
 
         return $this;
     }
@@ -78,8 +87,8 @@ class BaseObject
             }
 
             Rhapsody::getConnection()->insert($this->table, $databaseData);
-            $this->data['id'] = (int) Rhapsody::getConnection()->lastInsertId();
 
+            $this->data['id'] = (int) Rhapsody::getConnection()->lastInsertId();
             Rhapsody::getObjectCache()->saveObject($this);
         } elseif ($this->isModified()) {
             if ($this->hasColumn('updated_at')) {
@@ -316,13 +325,21 @@ class BaseObject
         if (0 === strpos($name, 'add')) {
             $column = preg_replace('/add/', '', $name, 1);
 
-            return $this->addChild($arguments[0]);
+            if ($this->hasChildren($column)) {
+                return $this->addChild($arguments[0]);
+            } else {
+                return $this->addForeignObject($arguments[0]);
+            }
         }
 
         if (0 === strpos($name, 'remove')) {
             $column = preg_replace('/remove/', '', $name, 1);
 
-            return $this->removeChild($arguments[0]);
+            if ($this->hasChildren($column)) {
+                return $this->removeChild($arguments[0]);
+            } else {
+                return $this->removeForeignObject($arguments[0]);
+            }
         }
 
         if (0 === strpos($name, 'get')) {
