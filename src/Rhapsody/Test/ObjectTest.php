@@ -173,4 +173,19 @@ class ObjectTest extends RhapsodyTestCase
         $this->assertEquals(0, $rhetoric->tags->count());
         $rhetoric->save();
     }
+
+    public function testCrossReferencedObjectsSet()
+    {
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
+        $rhetoric = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author)->save();
+        $rhetoricTag = Rhapsody::create('Tag')->setName('Rhetoric')->save();
+        $aristotelWorksTag = Rhapsody::create('Tag')->setName('Aristotel-works')->save();
+        $tags = Rhapsody::query('Tag')->find();
+
+        $rhetoric->setTags($tags);
+        $this->assertEquals(2, $rhetoric->tags->count());
+        $rhetoric->removeTag($aristotelWorksTag);
+        $this->assertEquals(1, $rhetoric->tags->count());
+        $this->assertTrue($rhetoric->tags->contains($rhetoricTag));
+    }
 }

@@ -88,16 +88,8 @@ class ChildrenAwareObject extends ParentAwareObject
         $currentChildren = $this->getChildren($table);
 
         foreach ($children as $child) {
-            if (! $currentChildren->containsObjectId($child)) {
-                $currentChildren->add($child);
-            }
-
-            $child->setParent($this);
+            $this->addChild($child);
             $children->remove($child);
-        }
-
-        if ($this->isNew()) {
-            $this->save(); // id needed
         }
 
         return $this;
@@ -107,7 +99,7 @@ class ChildrenAwareObject extends ParentAwareObject
     {
         $currentChildren = $this->getChildren($child->getTable());
 
-        return $currentChildren->containsObjectId($child);
+        return $currentChildren->contains($child);
     }
 
     public function addChild(Object $child)

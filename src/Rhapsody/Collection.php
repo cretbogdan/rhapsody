@@ -34,7 +34,9 @@ class Collection extends ArrayCollection
         Rhapsody::getConnection()->commit();
     }
 
-
+    /**
+     * Delete all objects from database
+     */
     public function delete()
     {
         Rhapsody::getConnection()->beginTransaction();
@@ -91,28 +93,6 @@ class Collection extends ArrayCollection
         $this->table = $table;
     }
 
-    public function containsObjectId($object)
-    {
-        $id = $object instanceof Object ? $object->get('id') : $object;
-
-        return in_array($id, $this->toColumnValues('id'));
-    }
-
-    public function findById($object)
-    {
-        if (! $this->containsObjectId($object)) {
-            return null;
-        }
-
-        $id = $object instanceof Object ? $object->get('id') : $object;
-
-        foreach ($this->getObjects() as $collectionObject) {
-            if ($id == $collectionObject->id) {
-                return $collectionObject;
-            }
-        }
-    }
-
     /**
      * Get the table of the elements in the collection
      *
@@ -123,12 +103,59 @@ class Collection extends ArrayCollection
         return $this->table;
     }
 
+    /**
+     * Remove an element from the collection
+     *
+     * @param  int|Object   $key
+     *
+     * @return null|Object  The removed element on success, NULL otherwise
+     */
     public function remove($key)
     {
         if ($key instanceof Object) {
-            return $this->removeElement($this->findById($key));
+            return $this->removeElement($key);
         }
 
         return parent::remove($key);
+    }
+
+    /**
+     * Returns an array represantation of the collection
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        $result = array();
+
+        foreach ($this->getObjects() as $object) {
+            $result[] = $object->toArray();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Returns a new collection with objects that are only in this collection and NOT in the given collection
+     *
+     * @param  Collection $collection
+     *
+     * @return Collection
+     */
+    public function diff(Collection $collection)
+    {
+        if ($this->getTable() != $collection->getTable()) {
+            throw new RhapsodyException("Cannot compare collections of 2 different tables: ".$collection->getTable().' '.$this->getTable());
+        }
+
+        $diff = Rhapsody::createCollection($this->getTable());
+
+        foreach ($this->getObjects() as $object) {
+            if (! $collection->contains($object)) {
+                $diff->add($object);
+            }
+        }
+
+        return $diff;
     }
 }

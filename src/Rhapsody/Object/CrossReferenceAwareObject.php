@@ -6,6 +6,7 @@ use Doctrine\Common\Util\Inflector;
 use Rhapsody;
 use Rhapsody\RhapsodyException;
 use Rhapsody\Object;
+use Rhapsody\Collection;
 
 class CrossReferenceAwareObject extends ChildrenAwareObject
 {
@@ -43,7 +44,7 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
                 throw $exception;
             }
 
-            return $this->setCrossReferenceObjects($name, $value);
+            return $this->setForeignObjects($value);
         }
     }
 
@@ -95,6 +96,24 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
         }
 
         return $this->foreignObjects[$foreignTable];
+    }
+
+    public function setForeignObjects(Collection $objects)
+    {
+        $this->validateCrossReferenceTable($objects->getTable());
+        $currentForeignObjects = $this->getForeignObjects($objects->getTable());
+
+        $toRemoveForeignObjects = $currentForeignObjects->diff($objects);
+        foreach ($toRemoveForeignObjects as $toRemoveForeignObject) {
+            $this->removeForeignObject($toRemoveForeignObject);
+        }
+
+        $toAddForeignObjects = $objects->diff($currentForeignObjects);
+        foreach ($toAddForeignObjects as $toAddForeignObject) {
+            $this->addForeignObject($toAddForeignObject);
+        }
+
+        return $this;
     }
 
     public function removeForeignObject(Object $object)
@@ -170,70 +189,6 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
             throw new RhapsodyException("Table \"$table\" has no relation with ".$this->getTable());
         }
     }
-
-    // public function getCrossReferenceObjects($table)
-    // {
-    //     $table = $this->getReferencedForeignTableName($table);
-    //     $referenceTable = $this->getReferenceTableName($table);
-    //     $idColumn = $this->table.'_id';
-
-    //     if (! isset($this->crossReferenceObjects[$referenceTable])) {
-    //         $referenceObjects = Rhapsody::query($referenceTable)->filterBy($idColumn)->find();
-    //         $ids = $referenceObjects->toColumnValues('id');
-    //         $foreignObjects = Rhapsody::query($table)->filterById(implode(',', $ids), 'in')->find();
-
-    //         foreach ($foreignObjects as $object) {
-    //             $this->addCrossReferenceObject($table, $object);
-    //         }
-    //     }
-
-    //     return $this->crossReferenceObjects[$referenceTable];
-    // }
-
-    // public function addCrossReferenceObject($table, Object $object)
-    // {
-    //     $table = $this->getReferencedForeignTableName($table);
-
-    //     if (! isset($this->crossReferenceObjects[$table])) {
-    //         $this->crossReferenceObjects[$table] = Rhapsody::createCollection($table);
-    //     }
-
-    //     if (! $this->crossReferenceObjects[$table]->containsObjectId($object)) {
-    //         $this->crossReferenceObjects[$table]->add($object);
-    //     }
-    // }
-
-    // public function setCrossReferenceObjects($table, Collection $crossReferenceObjects)
-    // {
-    //     $table = $this->getReferencedForeignTableName($table);
-    //     $referenceTable = $this->getReferenceTableName($table);
-
-    //     $idColumn = $this->table.'_id';
-
-    //     $referenceObjects = Rhapsody::query($referenceTable)->filterBy($idColumn)->find();
-    //     $referenceObjectIds = $referenceObjects->toColumnValues('id');
-
-    //     $currentCrossReferenceObjects = $this->getCrossReferenceObjects($table);
-
-    //     foreach ($referenceObjects as $object) {
-    //         $this->addObjectDelete($object);
-    //     }
-
-    //     foreach ($currentCrossReferenceObjects as $object) {
-    //         if ($crossReferenceObjects->containsObjectId($object)) {
-    //             $this->addCrossReferenceObject($table, $object);
-    //         } else {
-    //             foreach ($referenceObjects as $referenceObject) {
-    //                 if ($object->id == $referenceObject->get($idColumn)) {
-    //                     $this->addObjectDelete($referenceObject);
-    //                     break;
-    //                 }
-    //             }
-    //         }
-
-    //         $crossReferenceObjects->remove($object);
-    //     }
-    // }
 
     public function getReferenceTable($table)
     {
