@@ -70,7 +70,11 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
         $table = $this->getReferenceTable($table);
 
         if (! isset($this->referenceObjects[$table])) {
-            $this->referenceObjects[$table] = Rhapsody::query($table)->filterBy($this->getTable().'_id', $this->id)->find();
+            if ($this->id) {
+                $this->referenceObjects[$table] = Rhapsody::query($table)->filterBy($this->getTable().'_id', $this->id)->find();
+            } else {
+                $this->referenceObjects[$table] = Rhapsody::createCollection($table);
+            }
         }
 
         return $this->referenceObjects[$table];

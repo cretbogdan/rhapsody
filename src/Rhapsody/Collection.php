@@ -22,6 +22,11 @@ class Collection extends ArrayCollection
         return $collection;
     }
 
+    public function getObjects()
+    {
+        return $this->toArray();
+    }
+
     /**
      * Save all objects to database
      */
@@ -117,22 +122,6 @@ class Collection extends ArrayCollection
         }
 
         return parent::remove($key);
-    }
-
-    /**
-     * Returns an array represantation of the collection
-     *
-     * @return array
-     */
-    public function toArray()
-    {
-        $result = array();
-
-        foreach ($this->getObjects() as $object) {
-            $result[] = $object->toArray();
-        }
-
-        return $result;
     }
 
     /**
