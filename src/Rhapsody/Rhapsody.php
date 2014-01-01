@@ -99,6 +99,8 @@ class Rhapsody
 
     public static function createCollection($table, array $rows = array(), $isNew = true)
     {
+        $table = Inflector::tableize($table);
+
         return Collection::create($table, $rows, $isNew);
     }
 

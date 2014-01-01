@@ -29,14 +29,11 @@ class QueryTest extends RhapsodyTestCase
         $author = $book->author;
         $this->assertNotNull($author);
         $this->assertEquals($author->id, $aristotel->id);
+    }
 
-
-
-
-        // $books = $aristotel->books;
-        // echo Rhapsody::getTotalQueries();
-
-        // $author = Rhapsody::query('Author')->filterByName('')->findOne();
-
+    public function testNullWhere()
+    {
+        $author = Rhapsody::query('Author')->filterByName(null)->findOne();
+        $this->assertNull($author);
     }
 }
