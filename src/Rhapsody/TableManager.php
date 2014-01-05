@@ -8,6 +8,8 @@ class TableManager
 {
     private $schemaManager;
     private $columns = array();
+    private $tablesExists = array();
+    private $tables;
 
     public function __construct(Connection $conn)
     {
@@ -16,9 +18,7 @@ class TableManager
 
     public function getTable($name)
     {
-        $tables = $this->getSchemaManager()->listTables();
-
-        foreach ($tables as $table) {
+        foreach ($this->getTables() as $table) {
             if ($name == $table->getName()) {
                 return $table;
             }
@@ -27,9 +27,22 @@ class TableManager
         throw new \InvalidArgumentException("Table $name does not exist!");
     }
 
+    public function getTables()
+    {
+        if (null === $this->tables) {
+            $this->tables = $this->getSchemaManager()->listTables();
+        }
+
+        return $this->tables;
+    }
+
     public function tablesExist($tableNames)
     {
-        return $this->getSchemaManager()->tablesExist($tableNames);
+        if (! isset($this->tablesExists[$tableNames])) {
+            $this->tablesExists[$tableNames] = $this->getSchemaManager()->tablesExist($tableNames);
+        }
+
+        return $this->tablesExists[$tableNames];
     }
 
     public function hasColumn($table, $column)

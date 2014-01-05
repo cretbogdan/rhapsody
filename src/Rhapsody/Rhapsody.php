@@ -49,6 +49,11 @@ class Rhapsody
         }
     }
 
+    public static function getQueryLogger()
+    {
+        return self::$conn->getConfiguration()->getSQLLogger();
+    }
+
     public static function setQueryLogger(SQLLogger $logger = null)
     {
         self::$conn->getConfiguration()->setSQLLogger($logger);
