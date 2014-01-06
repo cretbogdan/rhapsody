@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 class Collection extends ArrayCollection
 {
     private $table;
+    private $virtualColumns = array();
 
     public function __construct($table = null, array $elements = array())
     {
@@ -64,6 +65,11 @@ class Collection extends ArrayCollection
         }
 
         return $result;
+    }
+
+    public function addVirtualColumns(array $columns)
+    {
+        $this->virtualColumns = array_merge($this->virtualColumns, $columns);
     }
 
     /**

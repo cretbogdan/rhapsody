@@ -16,6 +16,7 @@ class Query
     private $offset;
     private $filters;
     private $orderByColumns = array();
+    private $virtualColumns = array();
 
     protected function __construct($table)
     {
@@ -43,7 +44,6 @@ class Query
         return Rhapsody::getConnection()->executeUpdate("TRUNCATE TABLE `{$this->table}`");
     }
 
-
     /**
      * Add an order by column
      *
@@ -59,6 +59,26 @@ class Query
 
         return $this;
     }
+
+    public function withColumn($sql, $name)
+    {
+        $this->virtualColumns[$name] = $sql;
+    }
+
+    public function addSelect($select)
+    {
+        $this->queryBuilder->addSelect($select);
+
+        return $this;
+    }
+
+    public function groupBy($groupBy)
+    {
+        $this->queryBuilder->addGroupBy($groupBy);
+
+        return $this;
+    }
+
 
     /**
      * Add a having condition
@@ -208,7 +228,11 @@ class Query
     {
         $stmt = $this->getSelectBuilder()->execute();
 
-        return Collection::create($this->table, $stmt->fetchAll(), false);
+        $collection = new Collection($this->table);
+        $collection->addVirtualColumns(array_keys($this->virtualColumns));
+        $collection->fromArray($stmt->fetchAll(), false);
+
+        return $collection;
     }
 
     /**
@@ -265,7 +289,13 @@ class Query
 
     private function getSelectBuilder()
     {
-        return $this->getTableBuilder()->select('*'); //->execute();
+        $builder = $this->getTableBuilder()->addSelect($this->table.'.*');
+
+        foreach ($this->virtualColumns as $name => $sql) {
+            $builder->addSelect($sql." AS ".$name);
+        }
+
+        return $builder;//->execute();
     }
 
     private function getCountBuilder()
