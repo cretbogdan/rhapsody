@@ -10,11 +10,12 @@ use Rhapsody\RhapsodyException;
 class BaseObject
 {
     private $data = array();
-    private $crossReferenceObjects = array();
+    public $virtualData = array();
     private $toDelete = array(); // to delete objects on save
     public $toSave = array(); // to delete objects on save
     protected $isNew = true;
     protected $isModified = false;
+    public $virtualColumns = array();
 
     public $table;
 
@@ -25,12 +26,21 @@ class BaseObject
         }
 
         $this->setDefaultValues();
+        $this->fromArray($data);
 
+        $this->isNew = $isNew;
+    }
+
+    public function addVirtualColumns(array $columns)
+    {
+        $this->virtualColumns = array_merge($this->virtualColumns, $columns);
+    }
+
+    public function fromArray(array $data = array())
+    {
         foreach ($data as $column => $value) {
             $this->set($column, $value);
         }
-
-        $this->isNew = $isNew;
     }
 
     /**
@@ -156,6 +166,10 @@ class BaseObject
             return true;
         }
 
+        if ($this->hasVirtualColumn($name)) {
+            return true;
+        }
+
         return false;
     }
 
@@ -185,7 +199,65 @@ class BaseObject
             return $this;
         }
 
+        if ($this->hasVirtualColumn($name)) {
+            $this->setVirtualColumn($name, $value);
+        }
+
         throw new RhapsodyException("Column \"$name\" does not exist for table \"$this->table\"!");
+    }
+
+    public function populateVirtualColumns(array $virtualData)
+    {
+        $keys = array_map(function ($column) {
+            return Inflector::tableize($column);
+        }, array_keys($virtualData));
+
+        $virtualData = array_combine($keys, $virtualData);
+
+
+        foreach ($this->virtualColumns as $name) {
+            if (in_array($name, $keys)) {
+                $this->setVirtualColumn($name, $virtualData[$name]);
+            }
+        }
+    }
+
+    public function hasVirtualColumns(array $names)
+    {
+        foreach ($names as $name) {
+            if (! $this->hasVirtualColumn($name)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function hasVirtualColumn($name)
+    {
+        $name = Inflector::tableize($name);
+
+        return in_array($name, $this->virtualColumns);
+    }
+
+    public function setVirtualColumn($name, $value)
+    {
+        if (! $this->hasVirtualColumn($name)) {
+            throw new RhapsodyException("No virtual column \"$name\"");
+        }
+
+        $name = Inflector::tableize($name);
+        $this->virtualData[$name] = $value;
+    }
+
+    public function getVirtualColumn($name)
+    {
+        if (! $this->hasVirtualColumn($name)) {
+            throw new RhapsodyException("No virtual column \"$name\"");
+        }
+
+        $name = Inflector::tableize($name);
+        return $this->virtualData[$name];
     }
 
     public function getId()
@@ -206,6 +278,10 @@ class BaseObject
 
         if ($this->hasColumn($name)) {
             return $this->data[$name];
+        }
+
+        if ($this->hasVirtualColumn($name)) {
+            return $this->getVirtualColumn($name);
         }
 
         throw new RhapsodyException("Column \"$name\" does not exist for table \"$this->table\"!");

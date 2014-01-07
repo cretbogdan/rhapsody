@@ -16,7 +16,12 @@ class ColumnFilter
         $value = static::cleanValue($value, $comparison);
 
         if (null === $value && '=' === $comparison) {
-            $comparison = ' is null ';
+            $comparison = ' IS NULL ';
+            $value = '';
+        }
+
+        if (null === $value && 'not null' === trim(strtolower($comparison))) {
+            $comparison = ' IS NOT NULL ';
             $value = '';
         }
 
@@ -46,7 +51,7 @@ class ColumnFilter
             $value = (int) $value;
         }
 
-        if ('in' == strtolower($comparison) && is_array($value)) {
+        if ('in' == trim(strtolower($comparison)) && is_array($value)) {
             $value = implode(',', $value);
         }
 

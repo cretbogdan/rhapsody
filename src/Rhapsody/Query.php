@@ -63,6 +63,8 @@ class Query
     public function withColumn($sql, $name)
     {
         $this->virtualColumns[$name] = $sql;
+
+        return $this;
     }
 
     public function addSelect($select)
@@ -187,10 +189,18 @@ class Query
         if ($data) {
             $cache = Rhapsody::getObjectCache();
             $object = $cache->fetchObject($data['id'], $this->table);
+            $virtualColumns = array_keys($this->virtualColumns);
 
             if (! $object) {
-                $object = Rhapsody::create($this->table, $data, false);
+                $object = Rhapsody::create($this->table);
+                $object->addVirtualColumns($virtualColumns);
+                $object->fromArray($data);
                 $cache->saveObject($object);
+            }
+
+            if (! empty($virtualColumns) && ! $object->hasVirtualColumns($virtualColumns)) {
+                $object->addVirtualColumns($virtualColumns);
+                $object->populateVirtualColumns($data);
             }
         }
 
@@ -227,10 +237,9 @@ class Query
     public function find()
     {
         $stmt = $this->getSelectBuilder()->execute();
-
         $collection = new Collection($this->table);
         $collection->addVirtualColumns(array_keys($this->virtualColumns));
-        $collection->fromArray($stmt->fetchAll(), false);
+        $collection->fromArray($stmt->fetchAll());
 
         return $collection;
     }

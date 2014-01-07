@@ -77,7 +77,7 @@ class Collection extends ArrayCollection
      *
      * @param  array $rows
      */
-    public function fromArray(array $rows, $isNew = true)
+    public function fromArray(array $rows)
     {
         $this->clear();
         $cache = Rhapsody::getObjectCache();
@@ -85,8 +85,15 @@ class Collection extends ArrayCollection
         foreach ($rows as $row) {
             if (isset($row['id']) && $cache->containsObject($row['id'], $this->table)) {
                 $object = $cache->fetchObject($row['id'], $this->table);
+
+                if (! empty($this->virtualColumns) && ! $object->hasVirtualColumns($this->virtualColumns)) {
+                    $object->addVirtualColumns($this->virtualColumns);
+                    $object->populateVirtualColumns($row);
+                }
             } else {
-                $object = Rhapsody::create($this->table, $row, $isNew);
+                $object = Rhapsody::create($this->table);
+                $object->addVirtualColumns($this->virtualColumns);
+                $object->fromArray($row);
                 $cache->saveObject($object);
             }
 
