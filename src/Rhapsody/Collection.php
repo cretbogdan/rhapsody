@@ -3,6 +3,7 @@
 namespace Rhapsody;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use Closure;
 
 class Collection extends ArrayCollection
 {
@@ -26,6 +27,13 @@ class Collection extends ArrayCollection
     public function getObjects()
     {
         return $this->toArray();
+    }
+
+    public function each(Closure $callback)
+    {
+        foreach ($this->getObjects() as $object) {
+            $callback($object);
+        }
     }
 
     /**
