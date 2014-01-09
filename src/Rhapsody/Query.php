@@ -176,7 +176,7 @@ class Query
     /**
      * Find a single record
      *
-     * @return Object/null
+     * @return Object|null
      */
     public function findOne()
     {
@@ -333,6 +333,12 @@ class Query
             $column = str_replace('orderBy', '', $name);
 
             return $this->orderBy($column, $arguments[0]);
+        }
+
+        if (strpos($name, 'groupBy') === 0) {
+            $column = str_replace('groupBy', '', $name);
+
+            return $this->groupBy($column);
         }
 
         throw new \BadMethodCallException("Method $name does not exist!");
