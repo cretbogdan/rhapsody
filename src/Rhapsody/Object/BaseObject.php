@@ -201,6 +201,8 @@ class BaseObject
 
         if ($this->hasVirtualColumn($name)) {
             $this->setVirtualColumn($name, $value);
+
+            return $this;
         }
 
         throw new RhapsodyException("Column \"$name\" does not exist for table \"$this->table\"!");
