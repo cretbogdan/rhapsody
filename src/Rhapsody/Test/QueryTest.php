@@ -60,5 +60,8 @@ class QueryTest extends RhapsodyTestCase
 
         $this->assertTrue($author->hasVirtualColumn('upper_name'));
         $this->assertEquals('ARISTOTEL', $author->upperName);
+
+
+        Rhapsody::query('Author')->withColumn('UPPER(name)', 'upper_name')->groupById()->orderBy('upper_name')->find();
     }
 }
