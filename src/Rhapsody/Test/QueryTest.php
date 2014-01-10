@@ -72,13 +72,13 @@ class QueryTest extends RhapsodyTestCase
         $plato = Rhapsody::create('Author')->setName('Plato')->save();
         $republic = Rhapsody::create('Book')->setName('Republic')->setAuthor($plato)->save();
 
-        $books = Rhapsody::query('Book')->innerJoin('Author', 'a')->where('a.name = ?', 'Aristotel')->find();
+        $books = Rhapsody::query('Book')->joinAuthor('a')->where('a.name = ?', 'Aristotel')->find();
         $this->assertEquals(1, $books->count());
 
-        $books = Rhapsody::query('Book')->innerJoin('Author', 'a')->where('a.name = ?', 'NotAristotel')->find();
+        $books = Rhapsody::query('Book')->joinAuthor()->where('author.name = ?', 'NotAristotel')->find();
         $this->assertEquals(0, $books->count());
 
-        $books = Rhapsody::query('Book')->leftJoin('Author', 'a')->where('a.name <> ?', 'Aristotel')->find();
+        $books = Rhapsody::query('Book')->leftJoinAuthor('a')->where('a.name <> ?', 'Aristotel')->find();
         $this->assertEquals(1, $books->count());
         $this->assertEquals('Republic', $books->first()->name);
         $this->assertSame($republic, $books->getLast());

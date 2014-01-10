@@ -471,6 +471,34 @@ class Query
             return $this->groupBy($column);
         }
 
+        if (strpos($name, 'join') === 0) {
+            $table = str_replace('join', '', $name);
+            array_unshift($arguments, $table);
+
+            return call_user_func_array(array($this, 'join'), $arguments);
+        }
+
+        if (strpos($name, 'innerJoin') === 0) {
+            $table = str_replace('innerJoin', '', $name);
+            array_unshift($arguments, $table);
+
+            return call_user_func_array(array($this, 'innerJoin'), $arguments);
+        }
+
+        if (strpos($name, 'leftJoin') === 0) {
+            $table = str_replace('leftJoin', '', $name);
+            array_unshift($arguments, $table);
+
+            return call_user_func_array(array($this, 'leftJoin'), $arguments);
+        }
+
+        if (strpos($name, 'rightJoin') === 0) {
+            $table = str_replace('rightJoin', '', $name);
+            array_unshift($arguments, $table);
+
+            return call_user_func_array(array($this, 'rightJoin'), $arguments);
+        }
+
         throw new \BadMethodCallException("Method $name does not exist!");
     }
 }
