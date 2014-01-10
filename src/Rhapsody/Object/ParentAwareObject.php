@@ -17,7 +17,7 @@ class ParentAwareObject extends BaseObject
             return true;
         }
 
-        return $this->hasParent($table);
+        return $this->hasParent($name);
     }
 
     public function get($name)

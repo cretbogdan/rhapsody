@@ -170,6 +170,17 @@ class Rhapsody
         return end($logger->queries);
     }
 
+    public static function getLastExecutedQueries($number = 5)
+    {
+        $logger = self::$conn->getConfiguration()->getSQLLogger();
+
+        if (! $logger) {
+            throw new RhapsodyException("No SQL Logger is enabled!");
+        }
+
+        return array_slice(array_reverse($logger->queries), 0 , $number);
+    }
+
     /**
      * Get total number of queries
      *

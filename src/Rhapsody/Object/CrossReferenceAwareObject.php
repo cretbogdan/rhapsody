@@ -19,7 +19,7 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
             return true;
         }
 
-        return $this->hasCrossReferenceObjects($table);
+        return $this->hasCrossReferenceObjects($name);
     }
 
     public function get($name)

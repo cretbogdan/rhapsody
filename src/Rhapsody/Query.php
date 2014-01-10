@@ -18,6 +18,8 @@ class Query
     private $filters;
     private $orderByColumns = array();
     private $virtualColumns = array();
+    private $rawSql;
+    private $rawParams;
 
     protected function __construct($table, $alias = null)
     {
@@ -39,6 +41,14 @@ class Query
         $class = Rhapsody::getQueryClass($table);
 
         return new $class($table);
+    }
+
+    public function raw($sql, array $params = array())
+    {
+        $this->rawSql = $sql;
+        $this->rawParams = $params;
+
+        return $this;
     }
 
     /**
@@ -326,9 +336,13 @@ class Query
      */
     public function findOne()
     {
-        $this->limit(1);
-        $stmt = $this->queryBuilder->execute();
-        $data = $stmt->fetch();
+        if ($this->rawSql) {
+            $data = Rhapsody::getConnection()->fetchArray($this->rawSql, $this->rawParams);
+        } else {
+            $this->limit(1);
+            $stmt = $this->queryBuilder->execute();
+            $data = $stmt->fetch();
+        }
 
         $object = null;
 
@@ -382,10 +396,16 @@ class Query
      */
     public function find()
     {
-        $stmt = $this->queryBuilder->execute();
+        if ($this->rawSql) {
+            $rows = Rhapsody::getConnection()->fetchAll($this->rawSql, $this->rawParams);
+        } else {
+            $stmt = $this->queryBuilder->execute();
+            $rows = $stmt->fetchAll();
+        }
+
         $collection = new Collection($this->table);
         $collection->addVirtualColumns(array_keys($this->virtualColumns));
-        $collection->fromArray($stmt->fetchAll());
+        $collection->fromArray($rows);
 
         return $collection;
     }

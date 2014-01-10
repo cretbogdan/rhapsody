@@ -18,7 +18,7 @@ class ChildrenAwareObject extends ParentAwareObject
             return true;
         }
 
-        return $this->hasChildren($table);
+        return $this->hasChildren($name);
     }
 
     public function get($name)
