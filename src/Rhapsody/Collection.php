@@ -168,4 +168,19 @@ class Collection extends ArrayCollection
 
         return $diff;
     }
+
+    public function getFirst()
+    {
+        return $this->first();
+    }
+
+    public function getNext()
+    {
+        return $this->next();
+    }
+
+    public function getLast()
+    {
+        return $this->last();
+    }
 }

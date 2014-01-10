@@ -61,7 +61,26 @@ class QueryTest extends RhapsodyTestCase
         $this->assertTrue($author->hasVirtualColumn('upper_name'));
         $this->assertEquals('ARISTOTEL', $author->upperName);
 
-
         Rhapsody::query('Author')->withColumn('UPPER(name)', 'upper_name')->groupById()->orderBy('upper_name')->find();
+    }
+
+    public function testJoin()
+    {
+        $author = Rhapsody::create('Author')->setName('Aristotel')->save();
+        $book = Rhapsody::create('Book')->setName('Rhetoric')->setAuthor($author)->save();
+
+        $plato = Rhapsody::create('Author')->setName('Plato')->save();
+        $republic = Rhapsody::create('Book')->setName('Republic')->setAuthor($plato)->save();
+
+        $books = Rhapsody::query('Book')->innerJoin('Author', 'a')->where('a.name = ?', 'Aristotel')->find();
+        $this->assertEquals(1, $books->count());
+
+        $books = Rhapsody::query('Book')->innerJoin('Author', 'a')->where('a.name = ?', 'NotAristotel')->find();
+        $this->assertEquals(0, $books->count());
+
+        $books = Rhapsody::query('Book')->leftJoin('Author', 'a')->where('a.name <> ?', 'Aristotel')->find();
+        $this->assertEquals(1, $books->count());
+        $this->assertEquals('Republic', $books->first()->name);
+        $this->assertSame($republic, $books->getLast());
     }
 }

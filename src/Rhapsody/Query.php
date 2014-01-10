@@ -11,6 +11,7 @@ use Rhapsody\Query\FilterUtils;
 class Query
 {
     protected $table;
+    protected $alias;
     private $queryBuilder;
     private $limit;
     private $offset;
@@ -18,14 +19,19 @@ class Query
     private $orderByColumns = array();
     private $virtualColumns = array();
 
-    protected function __construct($table)
+    protected function __construct($table, $alias = null)
     {
-        if ($table) {
-            $table = Inflector::tableize($table);
-            $this->table = $table;
-            $this->filters = new FilterCollection();
-            $this->queryBuilder = Rhapsody::getConnection()->createQueryBuilder();
+        if (! $table) {
+            throw new \RhapsodyException("No table provided for query!");
         }
+
+        $this->table = Inflector::tableize($table);
+        $this->alias = $alias ?: $this->table;
+        $this->filters = new FilterCollection();
+        $this->queryBuilder = Rhapsody::getConnection()
+            ->createQueryBuilder()
+            ->from($this->table, $this->alias)
+            ->addSelect($this->alias.'.*');
     }
 
     public static function create($table = null)
@@ -35,7 +41,123 @@ class Query
         return new $class($table);
     }
 
+    /**
+     * Shortcut for innerJoin
+     *
+     * @see Query::innerJoin
+     */
+    public function join($foreignTableName, $foreignTableAlias = null, $condition = null)
+    {
+        return $this->innerJoin($foreignTableName, $foreignTableAlias, $condition);
+    }
 
+    /**
+     * Inner join a foreign table
+     *
+     * @param  string $foreignTableName
+     * @param  string $foreignTableAlias
+     * @param  string $condition
+     *
+     * @return Query
+     */
+    public function innerJoin($foreignTableName, $foreignTableAlias = null, $condition = null)
+    {
+        return $this->addJoin('inner', $foreignTableName, $foreignTableAlias, $condition);
+    }
+
+    /**
+     * Left join a foreign table
+     *
+     * @param  string $foreignTableName
+     * @param  string $foreignTableAlias
+     * @param  string $condition
+     *
+     * @return Query
+     */
+    public function leftJoin($foreignTableName, $foreignTableAlias = null, $condition = null)
+    {
+        return $this->addJoin('left', $foreignTableName, $foreignTableAlias, $condition);
+    }
+
+    /**
+     * Right join a foreign table
+     *
+     * @param  string $foreignTableName
+     * @param  string $foreignTableAlias
+     * @param  string $condition
+     *
+     * @return Query
+     */
+    public function rightJoin($foreignTableName, $foreignTableAlias = null, $condition = null)
+    {
+        return $this->addJoin('right', $foreignTableName, $foreignTableAlias, $condition);
+    }
+
+    /**
+     * Add a join
+     *
+     * @param string $type
+     * @param string $foreignTableName
+     * @param string $foreignTableAlias
+     * @param string $condition
+     *
+     * @return Query
+     *
+     * @throws RhapsodyException    If unknown join type
+     */
+    private function addJoin($type = 'inner', $foreignTableName, $foreignTableAlias = null, $condition = null)
+    {
+        $foreignTableName = Inflector::tableize($foreignTableName);
+        $foreignTableAlias = $foreignTableAlias ?: $foreignTableName;
+
+        if (! $condition) {
+            $condition = $this->guessJoinCondition($foreignTableName, $foreignTableAlias);
+        }
+
+        if ('inner' == $type) {
+            $this->queryBuilder->innerJoin($this->alias, $foreignTableName, $foreignTableAlias, $condition);
+        } elseif ('left' == $type) {
+            $this->queryBuilder->leftJoin($this->alias, $foreignTableName, $foreignTableAlias, $condition);
+        } elseif ('right' == $type) {
+            $this->queryBuilder->rightJoin($this->alias, $foreignTableName, $foreignTableAlias, $condition);
+        } else {
+            throw new RhapsodyException("Unknown join type $type");
+        }
+
+        return $this;
+    }
+
+    /**
+     * Guess the join condition with a foreign table
+     *
+     * @param  string $foreignTableName
+     * @param  string $foreignTableAlias
+     *
+     * @return string
+     *
+     * @throws RhapsodyException    If condition cannot be guessed
+     */
+    protected function guessJoinCondition($foreignTableName, $foreignTableAlias)
+    {
+        if (Rhapsody::getTableManager()->getTable($foreignTableName)->hasColumn($this->table.'_id')) {
+            return $this->alias.".id = ".$foreignTableAlias.".".$this->table.'_id';
+        }
+
+        if ($this->getTableObject()->hasColumn($foreignTableName.'_id')) {
+            return $this->alias.".".$foreignTableName."_id = ".$foreignTableAlias.".id";
+        }
+
+        throw new \RhapsodyException("Cannot guess join condition for $this->table and $foreignTableName");
+    }
+/*
+     * @param string $fromAlias The alias that points to a from clause
+     * @param string $join The table name to join
+     * @param string $alias The alias of the join table
+     * @param string $condition The condition for the join
+     * @return QueryBuilder This QueryBuilder instance.
+    public function innerJoin($fromAlias, $join, $alias, $condition = null)
+    {
+ */
     /**
      * Truncate table
      */
@@ -60,13 +182,31 @@ class Query
         return $this;
     }
 
+    /**
+     * Add a virtual column
+     *
+     * @param  string $sql
+     * @param  string $name
+     *
+     * @return Query
+     */
     public function withColumn($sql, $name)
     {
         $this->virtualColumns[$name] = $sql;
+        $this->queryBuilder->addSelect($sql." AS ".$name);
 
         return $this;
     }
 
+    /**
+     * Add a select statement
+     *
+     * e.g. COUNT(*) AS total
+     *
+     * @param string $select
+     *
+     * @return Query
+     */
     public function addSelect($select)
     {
         $this->queryBuilder->addSelect($select);
@@ -74,6 +214,13 @@ class Query
         return $this;
     }
 
+    /**
+     * Add a group by
+     *
+     * @param  string $groupBy
+     *
+     * @return Query
+     */
     public function groupBy($groupBy)
     {
         $this->queryBuilder->addGroupBy($groupBy);
@@ -180,7 +327,7 @@ class Query
     public function findOne()
     {
         $this->limit(1);
-        $stmt = $this->getSelectBuilder()->execute();
+        $stmt = $this->queryBuilder->execute();
         $data = $stmt->fetch();
 
         $object = null;
@@ -235,7 +382,7 @@ class Query
      */
     public function find()
     {
-        $stmt = $this->getSelectBuilder()->execute();
+        $stmt = $this->queryBuilder->execute();
         $collection = new Collection($this->table);
         $collection->addVirtualColumns(array_keys($this->virtualColumns));
         $collection->fromArray($stmt->fetchAll());
@@ -250,7 +397,7 @@ class Query
     {
         $this->limit = 1;
 
-        return (int) $this->getCountBuilder()->execute()->fetchColumn();
+        return (int) $this->queryBuilder->select('COUNT(*)')->execute()->fetchColumn();
     }
 
 
@@ -275,7 +422,7 @@ class Query
      */
     public function delete()
     {
-        return $this->getTableBuilder()->delete($this->table, '')->execute();
+        return $this->queryBuilder->delete($this->table, '')->execute();
     }
 
 
@@ -292,28 +439,12 @@ class Query
             $this->queryBuilder->set($column, $value);
         }
 
-        return $this->getTableBuilder()->update($this->table, '')->execute();
+        return $this->queryBuilder->update($this->table, '')->execute();
     }
 
-    private function getSelectBuilder()
+    public function getTableObject()
     {
-        $builder = $this->getTableBuilder()->addSelect($this->table.'.*');
-
-        foreach ($this->virtualColumns as $name => $sql) {
-            $builder->addSelect($sql." AS ".$name);
-        }
-
-        return $builder;//->execute();
-    }
-
-    private function getCountBuilder()
-    {
-        return $this->getTableBuilder()->select('COUNT(*)'); //->execute();
-    }
-
-    private function getTableBuilder()
-    {
-        return $this->queryBuilder->from($this->table, $this->table);
+        return Rhapsody::getTableManager()->getTable($this->table);
     }
 
     /**
