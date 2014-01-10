@@ -31,6 +31,11 @@ class QueryTest extends RhapsodyTestCase
         $this->assertEquals($author->id, $aristotel->id);
     }
 
+    public function testOrderBy()
+    {
+        Rhapsody::query('Author')->orderByName('desc')->find();
+    }
+
     public function testNull()
     {
         $author = Rhapsody::query('Author')->filterByName(null)->findOne();
