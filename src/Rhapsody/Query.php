@@ -454,15 +454,17 @@ class Query
     {
         if (strpos($name, 'filterBy') === 0) {
             $column = str_replace('filterBy', '', $name);
+            $value = isset($arguments[0]) ? $arguments[0] : null;
             $comparison = isset($arguments[1]) ? $arguments[1] : '=';
 
-            return $this->filterBy($column, $arguments[0], $comparison);
+            return $this->filterBy($column, $value, $comparison);
         }
 
         if (strpos($name, 'orderBy') === 0) {
             $column = str_replace('orderBy', '', $name);
+            $type = isset($arguments[0]) ? $arguments[0] : 'asc';
 
-            return $this->orderBy($column, $arguments[0]);
+            return $this->orderBy($column, $type);
         }
 
         if (strpos($name, 'groupBy') === 0) {

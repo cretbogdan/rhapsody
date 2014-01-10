@@ -33,6 +33,7 @@ class QueryTest extends RhapsodyTestCase
 
     public function testOrderBy()
     {
+        Rhapsody::query('Author')->orderByName()->find();
         Rhapsody::query('Author')->orderByName('desc')->find();
     }
 
