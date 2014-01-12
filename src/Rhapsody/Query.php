@@ -412,6 +412,14 @@ class Query
     }
 
     /**
+     * @see chunk
+     */
+    public function chunkWithoutOffsetIncrease($size, Closure $callback)
+    {
+        $this->chunk($size, $callback, false);
+    }
+
+    /**
      * Chunk query results
      *
      * @param  int     $size
@@ -428,7 +436,7 @@ class Query
 
         do {
             $collection = $this->offset($offset)->limit($size)->find();
-            call_user_func($callback, $collection, $chunkNumber);
+            $callback($collection, $chunkNumber);
 
             $chunkNumber++;
             $offset += $increaseOffset ? $size : 0;

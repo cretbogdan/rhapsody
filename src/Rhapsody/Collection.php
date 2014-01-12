@@ -34,6 +34,8 @@ class Collection extends ArrayCollection
         foreach ($this->getObjects() as $object) {
             $callback($object);
         }
+
+        return $this;
     }
 
     /**
