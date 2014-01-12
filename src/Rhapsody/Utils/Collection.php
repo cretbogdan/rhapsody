@@ -72,6 +72,8 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         if (isset($this->elements[$key])) {
             unset($this->elements[$key]);
         }
+
+        return $this;
     }
 
     public function removeElement($element)
@@ -81,6 +83,8 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         if ($key !== false) {
             unset($this->elements[$key]);
         }
+
+        return $this;
     }
 
     public function offsetExists($offset)
@@ -174,16 +178,22 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     public function set($key, $value)
     {
         $this->elements[$key] = $value;
+
+        return $this;
     }
 
     public function add($value)
     {
         $this->elements[] = $value;
+
+        return $this;
     }
 
     public function prepend($value)
     {
         array_unshift($this->elements, $value);
+
+        return $this;
     }
 
     public function isEmpty()
@@ -211,6 +221,8 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         foreach ($this->elements as $element) {
             $callback($element);
         }
+
+        return $this;
     }
 
     public function partition(Closure $callback)
@@ -236,6 +248,8 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     public function clear()
     {
         $this->elements = array();
+
+        return $this;
     }
 
     public function slice($offset, $length = null)
