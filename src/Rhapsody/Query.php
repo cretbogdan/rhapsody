@@ -2,6 +2,7 @@
 
 namespace Rhapsody;
 
+use Closure;
 use Doctrine\Common\Util\Inflector;
 use Rhapsody\Query\Filter;
 use Rhapsody\Query\ColumnFilter;
@@ -410,14 +411,32 @@ class Query
         return $collection;
     }
 
+    public function chunk($size, Closure $callback)
+    {
+        $chunkNumber = 1;
+        $offset = 0;
+        do {
+            $collection = $this->offset($offset)->limit($size)->find();
+            $callback($collection, $chunkNumber);
+
+            $chunkNumber++;
+            $offset += $size;
+        } while (! $collection->isEmpty());
+    }
+
     /**
      * Count all records matching the query conditions
      */
     public function count()
     {
-        $this->limit = 1;
+        if ($this->rawSql) {
+            $sql = preg_replace('/(SELECT)(.*)(from)(.*)/i', '$1 COUNT(*) $3 $4', $this->rawSql);
+            $result = (int) Rhapsody::getConnection()->fetchColumn($sql, $this->rawParams);
+        } else {
+            $result = (int) $this->queryBuilder->select('COUNT(*)')->execute()->fetchColumn();
+        }
 
-        return (int) $this->queryBuilder->select('COUNT(*)')->execute()->fetchColumn();
+        return $result;
     }
 
 
