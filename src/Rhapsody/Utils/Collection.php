@@ -22,9 +22,19 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this->elements;
     }
 
+    public function getFirst()
+    {
+        return $this->first();
+    }
+
     public function first()
     {
         return reset($this->elements);
+    }
+
+    public function getLast()
+    {
+        return $this->last();
     }
 
     public function last()
@@ -37,9 +47,19 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return key($this->elements);
     }
 
+    public function getNext()
+    {
+        return $this->next();
+    }
+
     public function next()
     {
         return next($this->elements);
+    }
+
+    public function getCurrent()
+    {
+        return $this->current();
     }
 
     public function current()

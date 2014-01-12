@@ -2,10 +2,10 @@
 
 namespace Rhapsody;
 
-use Doctrine\Common\Collections\ArrayCollection;
+use Rhapsody\Utils\Collection as BaseCollection;
 use Closure;
 
-class Collection extends ArrayCollection
+class Collection extends BaseCollection
 {
     private $table;
     private $virtualColumns = array();
@@ -26,16 +26,7 @@ class Collection extends ArrayCollection
 
     public function getObjects()
     {
-        return $this->toArray();
-    }
-
-    public function each(Closure $callback)
-    {
-        foreach ($this->getObjects() as $object) {
-            $callback($object);
-        }
-
-        return $this;
+        return $this->getElements();
     }
 
     /**
@@ -169,20 +160,5 @@ class Collection extends ArrayCollection
         }
 
         return $diff;
-    }
-
-    public function getFirst()
-    {
-        return $this->first();
-    }
-
-    public function getNext()
-    {
-        return $this->next();
-    }
-
-    public function getLast()
-    {
-        return $this->last();
     }
 }
