@@ -411,16 +411,27 @@ class Query
         return $collection;
     }
 
-    public function chunk($size, Closure $callback)
+    /**
+     * Chunk query results
+     *
+     * @param  int     $size
+     * @param  Closure $callback
+     * @param  boolean $increaseOffset  If set to FALSE the offset for query will not be increased.
+     *                                  Useful when you alter the results and thus alter the query results
+     *
+     * @return Collection
+     */
+    public function chunk($size, Closure $callback, $increaseOffset = true)
     {
         $chunkNumber = 1;
         $offset = 0;
+
         do {
             $collection = $this->offset($offset)->limit($size)->find();
-            $callback($collection, $chunkNumber);
+            call_user_func($callback, $collection, $chunkNumber);
 
             $chunkNumber++;
-            $offset += $size;
+            $offset += $increaseOffset ? $size : 0;
         } while (! $collection->isEmpty());
     }
 

@@ -189,8 +189,8 @@ class BaseObject
 
         if ($this->hasColumn($name)) {
             $newValue = $this->getColumnType($name)->convertToPHPValue($value, Rhapsody::getConnection()->getDatabasePlatform());
-
-            if (isset($this->data[$name]) && $newValue != $this->data[$name]) {
+            
+            if ((isset($this->data[$name]) || array_key_exists($name, $this->data)) && $newValue != $this->data[$name]) {
                 $this->isModified = true;
             }
 
