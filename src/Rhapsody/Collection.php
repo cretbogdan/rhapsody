@@ -125,17 +125,17 @@ class Collection extends BaseCollection
     /**
      * Remove an element from the collection
      *
-     * @param  int|Object   $key
+     * @param  Object   $object
      *
      * @return null|Object  The removed element on success, NULL otherwise
      */
-    public function remove($key)
+    public function remove($object)
     {
-        if ($key instanceof Object) {
-            return $this->removeElement($key);
+        if (! $object instanceof Object) {
+            throw new RhapsodyException("Instance of \Rhapsody\Object expected!");
         }
 
-        return parent::remove($key);
+        return parent::remove($object);
     }
 
     /**
@@ -145,11 +145,17 @@ class Collection extends BaseCollection
      *
      * @return Collection
      */
-    public function diff(Collection $collection)
+    public function diff(BaseCollection $collection)
     {
+        if (! $collection instanceof Collection) {
+            throw new RhapsodyException("Invalid collection type ".get_class($collection));
+        }
+
         if ($this->getTable() != $collection->getTable()) {
             throw new RhapsodyException("Cannot compare collections of 2 different tables: ".$collection->getTable().' '.$this->getTable());
         }
+
+        // return parent::diff($collection);
 
         $diff = Rhapsody::createCollection($this->getTable());
 

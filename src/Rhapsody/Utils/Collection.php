@@ -67,7 +67,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return current($this->elements);
     }
 
-    public function remove($key)
+    public function removeByKey($key)
     {
         if (isset($this->elements[$key])) {
             unset($this->elements[$key]);
@@ -76,15 +76,26 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this;
     }
 
-    public function removeElement($element)
+    public function remove($elements)
+    {
+        if (is_array($elements)) {
+            foreach ($elements as $element) {
+                $this->doRemove($element);
+            }
+        } else {
+            $this->doRemove($elements);
+        }
+
+        return $this;
+    }
+
+    protected function doRemove($element)
     {
         $key = array_search($element, $this->elements, true);
 
         if ($key !== false) {
-            unset($this->elements[$key]);
+            $this->removeByKey($key);
         }
-
-        return $this;
     }
 
     public function offsetExists($offset)
@@ -107,7 +118,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
     public function offsetUnset($offset)
     {
-        return $this->remove($offset);
+        return $this->removeByKey($offset);
     }
 
     public function containsKey($key)
@@ -126,6 +137,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return false;
     }
 
+    public function has($element)
+    {
+        return $this->contains($element);
+    }
+
     public function exists(Closure $callback)
     {
         foreach ($this->elements as $element) {
@@ -133,6 +149,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
                 return true;
             }
         }
+
         return false;
     }
 
@@ -165,6 +182,13 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array_keys($this->elements);
     }
 
+    public function resetKeys()
+    {
+        $this->elements = array_values($this->elements);
+
+        return $this;
+    }
+
     public function getValues()
     {
         return array_values($this->elements);
@@ -189,6 +213,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this;
     }
 
+    public function append($value)
+    {
+        return $this->add($value);
+    }
+
     public function prepend($value)
     {
         array_unshift($this->elements, $value);
@@ -206,9 +235,19 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return new ArrayIterator($this->elements);
     }
 
+    public function slice($offset, $length = null)
+    {
+        return new static(array_slice($this->elements, $offset, $length, true));
+    }
+
     public function map(Closure $callback)
     {
         return new static(array_map($callback, $this->elements));
+    }
+
+    public function reverse()
+    {
+        return new static(array_reverse($this->elements));
     }
 
     public function filter(Closure $callback)
@@ -218,9 +257,12 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
     public function each(Closure $callback)
     {
-        foreach ($this->elements as $element) {
-            $callback($element);
-        }
+        return $this->walk($callback);
+    }
+
+    public function walk(Closure $callback)
+    {
+        array_walk($this->elements, $callback);
 
         return $this;
     }
@@ -230,7 +272,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         $coll1 = array();
         $coll2 = array();
 
-        foreach ($this->elements as $element) {
+        foreach ($this->elements as $key => $element) {
             if ($callback($element)) {
                 $coll1[$key] = $element;
             } else {
@@ -238,6 +280,20 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
             }
         }
         return array(new static($coll1), new static($coll2));
+    }
+
+    public function diff(Collection $collection)
+    {
+        $callback = function ($element) use ($collection) {
+            return ! $collection->contains($element);
+        };
+
+        return $this->filter($callback);
+    }
+
+    public function reduce(Closure $callback)
+    {
+        return array_reduce($this->elements, $callback);
     }
 
     public function __toString()
@@ -250,11 +306,6 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         $this->elements = array();
 
         return $this;
-    }
-
-    public function slice($offset, $length = null)
-    {
-        return array_slice($this->elements, $offset, $length, true);
     }
 
     public function __call($name, $arguments)
