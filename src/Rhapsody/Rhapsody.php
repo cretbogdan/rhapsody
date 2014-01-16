@@ -13,6 +13,8 @@ class Rhapsody
     private static $tableManager;
     private static $modelFormatter;
     private static $objectCache;
+    private static $objectClasses = array();
+    private static $queryClasses = array();
 
     /**
      * Setup connection.
@@ -206,17 +208,21 @@ class Rhapsody
      */
     public static function getObjectClass($table)
     {
-        $objectClass = self::getDefaultObjectClass();
+        $table = Inflector::classify($table);
 
-        if (self::$modelFormatter) {
-            $class = self::$modelFormatter.'\\'.Inflector::classify($table);
+        if (! isset(self::$objectClasses[$table])) {
+            self::$objectClasses[$table] = self::getDefaultObjectClass();
 
-            if (class_exists($class)) {
-                $objectClass = $class;
+            if (self::$modelFormatter) {
+                $class = self::$modelFormatter.'\\'.$table;
+
+                if (class_exists($class)) {
+                    self::$objectClasses[$table] = $class;
+                }
             }
         }
 
-        return $objectClass;
+        return self::$objectClasses[$table];
     }
 
     /**
@@ -228,17 +234,21 @@ class Rhapsody
      */
     public static function getQueryClass($table)
     {
-        $queryClass = '\Rhapsody\Query';
+        $table = Inflector::tableize($table);
 
-        if (self::$modelFormatter) {
-            $class = self::$modelFormatter.'\\'.Inflector::classify($table.'Query');
+        if ( !isset(self::$queryClasses[$table])) {
+            self::$queryClasses[$table] = '\Rhapsody\Query';
 
-            if (class_exists($class)) {
-                $queryClass = $class;
+            if (self::$modelFormatter) {
+                $class = self::$modelFormatter.'\\'.Inflector::classify($table.'Query');
+
+                if (class_exists($class)) {
+                    self::$queryClasses[$table] = $class;
+                }
             }
         }
 
-        return $queryClass;
+        return self::$queryClasses[$table];
     }
 
     /**
