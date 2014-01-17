@@ -322,7 +322,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
             return is_array($result) ? new static($result) : $result;
         }
 
-        throw new \BadMethodCallException("Method OpeningTimes\Utils\Collection::$name does not exist!");
+        throw new \BadMethodCallException("Method Rhapsody\Utils\Collection::$name does not exist!");
     }
 }
 
