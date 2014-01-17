@@ -128,13 +128,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
     public function contains($element)
     {
-        foreach ($this->elements as $collectionElement) {
-            if ($element === $collectionElement) {
-                return true;
-            }
-        }
-
-        return false;
+        return in_array($element, $this->elements);
     }
 
     public function has($element)
@@ -162,6 +156,15 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
 
         return null;
+    }
+
+    public function findByAttribute($name, $value)
+    {
+        $callback = function ($element) use ($name, $value) {
+            return $element[$name] == $value;
+        };
+
+        return $this->find($callback);
     }
 
     public function indexOf($element)

@@ -53,16 +53,29 @@ class Collection extends BaseCollection
         Rhapsody::getConnection()->commit();
     }
 
-    public function toColumnValues($column)
+    public function toColumnValues($columns)
     {
-        if (! Rhapsody::getTableManager()->hasColumn($this->getTable(), $column)) {
-            throw new \InvalidArgumentException("Table '$this->table' does not have column '$column'!");
+        if (! is_array($columns)) {
+            $columns = array($columns);
+        }
+
+        foreach ($columns as $column) {
+            if (! Rhapsody::getTableManager()->hasColumn($this->getTable(), $column) && ! in_array($column, $this->virtualColumns)) {
+                throw new \InvalidArgumentException("Table '$this->table' does not have column '$column'!");
+            }
         }
 
         $result = array();
-
         foreach ($this->getObjects() as $object) {
-            $result[] = $object->get($column);
+            if (1 == count($columns)) {
+                $result[] = $object->get($column);
+            } else {
+                $row = array();
+                foreach ($columns as $column) {
+                    $row[$column] = $object->get($column);
+                }
+                $result[] = $row;
+            }
         }
 
         return $result;

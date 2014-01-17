@@ -9,24 +9,24 @@ use Rhapsody\RhapsodyException;
 
 class BaseObject
 {
-    private $data = array();
-    public $virtualData = array();
-    private $toDelete = array(); // to delete objects on save
-    public $toSave = array(); // to delete objects on save
+    protected $columnData = array();
+    protected $virtualColumnData = array();
+    protected $toDelete = array(); // to delete objects on save
+    protected $toSave = array(); // to delete objects on save
     protected $isNew = true;
     protected $isModified = false;
-    public $virtualColumns = array();
+    protected $virtualColumns = array();
 
     public $table;
 
-    public function __construct($table = null, array $data = array(), $isNew = true)
+    public function __construct($table = null, array $columnData = array(), $isNew = true)
     {
         if ($table) {
             $this->table = $table;
         }
 
         $this->setDefaultValues();
-        $this->fromArray($data);
+        $this->fromArray($columnData);
 
         $this->isNew = $isNew;
     }
@@ -36,9 +36,9 @@ class BaseObject
         $this->virtualColumns = array_merge($this->virtualColumns, $columns);
     }
 
-    public function fromArray(array $data = array())
+    public function fromArray(array $columnData = array())
     {
-        foreach ($data as $column => $value) {
+        foreach ($columnData as $column => $value) {
             $this->set($column, $value);
         }
     }
@@ -98,7 +98,7 @@ class BaseObject
 
             Rhapsody::getConnection()->insert($this->table, $databaseData);
 
-            $this->data['id'] = (int) Rhapsody::getConnection()->lastInsertId();
+            $this->columnData['id'] = (int) Rhapsody::getConnection()->lastInsertId();
             Rhapsody::getObjectCache()->saveObject($this);
         } elseif ($this->isModified()) {
             if ($this->hasColumn('updated_at')) {
@@ -115,7 +115,7 @@ class BaseObject
     {
         $databaseData = array();
 
-        foreach ($this->data as $column => $value) {
+        foreach ($this->columnData as $column => $value) {
             $databaseData[$column] = $this->getColumnType($column)->convertToDatabaseValue($value, Rhapsody::getConnection()->getDatabasePlatform());
         }
 
@@ -124,7 +124,7 @@ class BaseObject
 
     public function toArray()
     {
-        return $this->data;
+        return $this->columnData;
     }
 
     /**
@@ -189,12 +189,12 @@ class BaseObject
 
         if ($this->hasColumn($name)) {
             $newValue = $this->getColumnType($name)->convertToPHPValue($value, Rhapsody::getConnection()->getDatabasePlatform());
-            
-            if ((isset($this->data[$name]) || array_key_exists($name, $this->data)) && $newValue != $this->data[$name]) {
+
+            if ((isset($this->columnData[$name]) || array_key_exists($name, $this->columnData)) && $newValue != $this->columnData[$name]) {
                 $this->isModified = true;
             }
 
-            $this->data[$name] = $newValue;
+            $this->columnData[$name] = $newValue;
 
             return $this;
         }
@@ -208,18 +208,18 @@ class BaseObject
         throw new RhapsodyException("Column \"$name\" does not exist for table \"$this->table\"!");
     }
 
-    public function populateVirtualColumns(array $virtualData)
+    public function populateVirtualColumns(array $virtualColumnData)
     {
         $keys = array_map(function ($column) {
             return Inflector::tableize($column);
-        }, array_keys($virtualData));
+        }, array_keys($virtualColumnData));
 
-        $virtualData = array_combine($keys, $virtualData);
+        $virtualColumnData = array_combine($keys, $virtualColumnData);
 
 
         foreach ($this->virtualColumns as $name) {
             if (in_array($name, $keys)) {
-                $this->setVirtualColumn($name, $virtualData[$name]);
+                $this->setVirtualColumn($name, $virtualColumnData[$name]);
             }
         }
     }
@@ -249,7 +249,7 @@ class BaseObject
         }
 
         $name = Inflector::tableize($name);
-        $this->virtualData[$name] = $value;
+        $this->virtualColumnData[$name] = $value;
     }
 
     public function getVirtualColumn($name)
@@ -259,7 +259,7 @@ class BaseObject
         }
 
         $name = Inflector::tableize($name);
-        return $this->virtualData[$name];
+        return $this->virtualColumnData[$name];
     }
 
     public function getId()
@@ -279,7 +279,7 @@ class BaseObject
         $name = Inflector::tableize($name);
 
         if ($this->hasColumn($name)) {
-            return $this->data[$name];
+            return $this->columnData[$name];
         }
 
         if ($this->hasVirtualColumn($name)) {
@@ -389,7 +389,7 @@ class BaseObject
     public function __unset($name)
     {
         $name = Inflector::tableize($name);
-        unset($this->data[$name]);
+        unset($this->columnData[$name]);
     }
 
     public function __call($name, $arguments)
