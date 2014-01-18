@@ -131,6 +131,7 @@ class Rhapsody
             return;
         }
 
+        $cache = self::getObjectCache();
         $cache->saveObject($object);
     }
 

@@ -7,6 +7,7 @@ use ArrayIterator;
 use Countable;
 use IteratorAggregate;
 use ArrayAccess;
+use Doctrine\Common\Util\Inflector;
 
 class Collection implements Countable, IteratorAggregate, ArrayAccess
 {
@@ -158,8 +159,8 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
     public function exists(Closure $callback)
     {
-        foreach ($this->elements as $element) {
-            if ($callback($element)) {
+        foreach ($this->elements as $key => $element) {
+            if ($callback($element, $key)) {
                 return true;
             }
         }
@@ -169,8 +170,8 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
     public function find(Closure $callback)
     {
-        foreach ($this->elements as $element) {
-            if ($callback($element)) {
+        foreach ($this->elements as $key => $element) {
+            if ($callback($element, $key)) {
                 return $element;
             }
         }
@@ -180,9 +181,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
     public function findByAttribute($name, $value)
     {
-        $callback = function ($element) use ($name, $value) {
-            return $element[$name] == $value;
-        };
+        $callback = $this->getAttributeFilterClosure($name, $value);
 
         return $this->find($callback);
     }
@@ -278,6 +277,13 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return new static(array_filter($this->elements, $callback));
     }
 
+    public function filterByAtrribute($name, $value)
+    {
+        $callback = $this->getAttributeFilterClosure($name, $value);
+
+        return $this->filter($callback);
+    }
+
     public function each(Closure $callback)
     {
         return $this->walk($callback);
@@ -319,7 +325,32 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array_reduce($this->elements, $callback);
     }
 
-    public function clone()
+    public function getAttributeFilterClosure($name, $value)
+    {
+        $callback = function ($element) use ($name, $value) {
+            if (is_array($element)) {
+                $valid = $element[$name] == $value;
+            } elseif (is_object($element)) {
+                $method = 'get'.ucfirst($name);
+
+                if (is_callable(array($element, $method))) {
+                    $valid = $element->$method() == $value;
+                } elseif (is_callable(array($element, $name))) {
+                    $valid = $element->$name() == $value;
+                }
+            }
+
+            if (! isset($valid)) {
+                throw new \InvalidArgumentException("Cannot access \"$name\" for element of current collection!");
+            }
+
+            return $valid;
+        };
+
+        return $callback;
+    }
+
+    public function copy()
     {
         $clone = clone $this;
 
