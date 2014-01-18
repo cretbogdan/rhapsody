@@ -277,7 +277,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return new static(array_filter($this->elements, $callback));
     }
 
-    public function filterByAtrribute($name, $value)
+    public function filterByAttribute($name, $value)
     {
         $callback = $this->getAttributeFilterClosure($name, $value);
 
