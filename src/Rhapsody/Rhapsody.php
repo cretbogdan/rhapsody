@@ -15,6 +15,7 @@ class Rhapsody
     private static $objectCache;
     private static $objectClasses = array();
     private static $queryClasses = array();
+    private static $instancePooling = true;
 
     /**
      * Setup connection.
@@ -49,6 +50,16 @@ class Rhapsody
         if (isset($parameters['model_formatter'])) {
             self::setModelFormatter($parameters['model_formatter']);
         }
+    }
+
+    public static function disableInstancePooling()
+    {
+        self::$instancePooling = false;
+    }
+
+    public static function enableInstancePooling()
+    {
+        self::$instancePooling = true;
     }
 
     public static function getQueryLogger()
@@ -91,17 +102,36 @@ class Rhapsody
      */
     public static function create($table, array $data = array())
     {
-        $cache = self::getObjectCache();
+        return self::fetchObjectCache($table, $data);
+    }
 
-        if (isset($data['id']) && $cache->containsObject($data['id'], $table)) {
-            $object = $cache->fetchObject($data['id'], $table);
+    public static function fetchObjectCache($table, array $data = array())
+    {
+        if (self::$instancePooling) {
+            $cache = self::getObjectCache();
+
+            if (isset($data['id']) && $cache->containsObject($data['id'], $table)) {
+                $object = $cache->fetchObject($data['id'], $table);
+            } else {
+                $class = self::getObjectClass($table);
+                $object = new $class(Inflector::tableize($table), $data);
+                self::cacheObject($object);
+            }
         } else {
             $class = self::getObjectClass($table);
             $object = new $class(Inflector::tableize($table), $data);
-            $cache->saveObject($object);
         }
 
         return $object;
+    }
+
+    public static function cacheObject(Object $object)
+    {
+        if (! self::$instancePooling) {
+            return;
+        }
+
+        $cache->saveObject($object);
     }
 
     public static function createCollection($table, array $rows = array(), $isNew = true)

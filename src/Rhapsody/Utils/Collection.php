@@ -98,6 +98,26 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
     }
 
+    public function pop()
+    {
+        return array_pop($this->elements);
+    }
+
+    public function removeLast()
+    {
+        return $this->pop();
+    }
+
+    public function shift()
+    {
+        return array_shift($this->elements);
+    }
+
+    public function removeFirst()
+    {
+        return $this->shift();
+    }
+
     public function offsetExists($offset)
     {
         return $this->containsKey($offset);
@@ -299,9 +319,18 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array_reduce($this->elements, $callback);
     }
 
-    public function __toString()
+    public function clone()
     {
-        return __CLASS__ . '@' . spl_object_hash($this);
+        $clone = clone $this;
+
+        return $clone;
+    }
+
+    public function shuffle()
+    {
+        shuffle($this->elements);
+
+        return $this;
     }
 
     public function clear()
@@ -309,6 +338,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         $this->elements = array();
 
         return $this;
+    }
+
+    public function __toString()
+    {
+        return __CLASS__ . '@' . spl_object_hash($this);
     }
 
     public function __call($name, $arguments)

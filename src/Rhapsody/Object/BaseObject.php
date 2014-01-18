@@ -99,7 +99,9 @@ class BaseObject
             Rhapsody::getConnection()->insert($this->table, $databaseData);
 
             $this->columnData['id'] = (int) Rhapsody::getConnection()->lastInsertId();
-            Rhapsody::getObjectCache()->saveObject($this);
+
+            Rhapsody::cacheObject($this);
+
         } elseif ($this->isModified()) {
             if ($this->hasColumn('updated_at')) {
                 $databaseData['updated_at'] = date('Y-m-d H:i:s');
