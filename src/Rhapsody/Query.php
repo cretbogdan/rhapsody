@@ -206,6 +206,18 @@ class Query
         return $this;
     }
 
+    public function orderByRandom()
+    {
+        $this->queryBuilder->addOrderBy('RAND()');
+
+        return $this;
+    }
+
+    public function orderByRand()
+    {
+        return $this->orderByRandom();
+    }
+
     /**
      * Add a virtual column
      *
@@ -283,7 +295,7 @@ class Query
         $this->filters->add($filter);
 
         $value = $filter->getValue() ? "(".$this->queryBuilder->createNamedParameter($filter->getValue()).")" : '';
-        $this->queryBuilder->andWhere($filter->getColumn()." ".$filter->getComparison()." ".$value);
+        $this->queryBuilder->andWhere($this->alias.'.'.$filter->getColumn()." ".$filter->getComparison()." ".$value);
 
         return $this;
     }
@@ -470,6 +482,10 @@ class Query
         return $result;
     }
 
+    public function __clone()
+    {
+        $this->queryBuilder = clone $this->queryBuilder;
+    }
 
     /**
      * Create a pager

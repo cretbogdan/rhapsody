@@ -7,20 +7,24 @@ class Pager
     private $query;
     private $page;
     private $maxPerPage;
-    private $totalRows;
+    private $nbResults;
     private $results;
 
     public function __construct($query, $page, $maxPerPage)
     {
-        $this->query = $query;
         $this->page = $page;
         $this->maxPerPage = $maxPerPage;
 
         $countQuery = clone $query;
-        $this->totalRows = $countQuery->count();
+        $this->nbResults = $countQuery->count();
 
         $offset = ($page - 1) * $maxPerPage;
         $this->results = $query->offset($offset)->limit($maxPerPage)->find();
+    }
+
+    public function getFirstPage()
+    {
+        return 1;
     }
 
     public function getPreviousPage()
@@ -35,24 +39,24 @@ class Pager
 
     public function getLastPage()
     {
-        return ceil($this->totalRows / $this->maxPerPage);
+        return ceil($this->nbResults / $this->maxPerPage);
     }
 
     public function haveToPaginate()
     {
-        return $this->totalRows > $this->maxPerPage;
+        return $this->nbResults > $this->maxPerPage;
     }
 
-    public function getLinks($nb_links = 5)
+    public function getLinks($nbLinks = 5)
     {
         $links = array();
-        $tmp     = $this->page - floor($nb_links / 2);
-        $check = $this->getLastPage() - $nb_links + 1;
+        $tmp   = $this->page - floor($nbLinks / 2);
+        $check = $this->getLastPage() - $nbLinks + 1;
         $limit = ($check > 0) ? $check : 1;
         $begin = ($tmp > 0) ? (($tmp > $limit) ? $limit : $tmp) : 1;
 
         $i = (int) $begin;
-        while (($i < $begin + $nb_links) && ($i <= $this->getLastPage())) {
+        while (($i < $begin + $nbLinks) && ($i <= $this->getLastPage())) {
             $links[] = $i++;
         }
 
@@ -62,6 +66,11 @@ class Pager
     public function getResults()
     {
         return $this->results;
+    }
+
+    public function getNbResults()
+    {
+        return $this->nbResults;
     }
 
     public function getPage()
