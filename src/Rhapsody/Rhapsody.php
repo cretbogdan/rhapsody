@@ -149,9 +149,9 @@ class Rhapsody
      *
      * @return Query
      */
-    public static function query($table)
+    public static function query($table, $alias = null)
     {
-        return Query::create($table);
+        return Query::create($table, $alias);
     }
 
     public static function getTableManager()

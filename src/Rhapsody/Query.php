@@ -29,7 +29,8 @@ class Query
         }
 
         $this->table = Inflector::tableize($table);
-        $this->alias = $alias ?: $this->table;
+        $this->alias = $alias ? $alias : $this->table;
+
         $this->filters = new FilterCollection();
         $this->queryBuilder = Rhapsody::getConnection()
             ->createQueryBuilder()
@@ -37,17 +38,29 @@ class Query
             ->addSelect($this->alias.'.*');
     }
 
-    public static function create($table = null)
+    public static function create($table = null, $alias = null)
     {
         $class = Rhapsody::getQueryClass($table);
 
-        return new $class($table);
+        return new $class($table, $alias);
     }
 
     public function raw($sql, array $params = array())
     {
         $this->rawSql = $sql;
         $this->rawParams = $params;
+
+        return $this;
+    }
+
+    public function customJoin($fromAlias, $joinTable, $joinTableAlias, $condition)
+    {
+        return $this->customInnerJoin($fromAlias, $joinTable, $joinTableAlias, $condition);
+    }
+
+    public function customInnerJoin($fromAlias, $joinTable, $joinTableAlias, $condition)
+    {
+        $this->queryBuilder->innerJoin($fromAlias, $joinTable, $joinTableAlias, $condition);
 
         return $this;
     }
