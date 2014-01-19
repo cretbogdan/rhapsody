@@ -88,11 +88,14 @@ class CrossReferenceAwareObject extends ChildrenAwareObject
         if (! isset($this->foreignObjects[$foreignTable])) {
             $this->foreignObjects[$foreignTable] = Rhapsody::createCollection($foreignTable);
 
-            $referenceObjectIds = $this->getReferenceObjects($table)->toColumnValues('id');
-            $referenceObjectIds = array_filter($referenceObjectIds);
+            $referenceObjectIds = $this->getReferenceObjects($table)->toColumnValues($foreignTable.'_id');
+            $referenceObjectIds = array_unique($referenceObjectIds);
+
 
             if (! empty($referenceObjectIds)) {
-                $foreignObjects = Rhapsody::query($foreignTable)->filterById($referenceObjectIds, 'in')->find();
+                $sql = 'id in ('.implode(',', $referenceObjectIds).')';
+                $foreignObjects = Rhapsody::query($foreignTable)->where($sql)->find();
+
                 foreach ($foreignObjects as $foreignObject) {
                     $this->foreignObjects[$foreignTable]->add($foreignObject);
                 }

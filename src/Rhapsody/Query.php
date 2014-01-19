@@ -449,8 +449,7 @@ class Query
     public function count()
     {
         if ($this->rawSql) {
-            $sql = preg_replace('/(SELECT)(.*)(from)(.*)/i', '$1 COUNT(*) $3 $4', $this->rawSql);
-            $result = (int) Rhapsody::getConnection()->fetchColumn($sql, $this->rawParams);
+            $result = (int) Rhapsody::getConnection()->fetchColumn("SELECT COUNT(*) FROM (".$this->rawSql.") count", $this->rawParams);
         } else {
             $result = (int) $this->queryBuilder->select('COUNT(*)')->execute()->fetchColumn();
         }
