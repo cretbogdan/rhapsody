@@ -157,6 +157,23 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return isset($this->elements[$key]);
     }
 
+    public function containsAll($elements)
+    {
+        if ($elements instanceof Collection) {
+            $elements = $elements->getElements();
+        } elseif (! is_array($elements)) {
+            throw new \InvalidArgumentException("Expected instance of Collection or array!");
+        }
+
+        foreach ($elements as $element) {
+            if (! $this->contains($element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function contains($element)
     {
         return in_array($element, $this->elements);
@@ -361,6 +378,19 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
 
         return $padded;
+    }
+
+    public function random($num = 1)
+    {
+        return $this->rand($num);
+    }
+
+    public function rand($num = 1)
+    {
+        $random = array_rand($this->elements, $num);
+        $result = 1 === $num ? $this->get($random) : new static($random);
+
+        return $result;
     }
 
     /**

@@ -197,6 +197,27 @@ class BaseCollectionTest extends RhapsodyTestCase
         $this->assertEquals($expected, $countries);
     }
 
+    /**
+     * @dataProvider rangeCollectionsProvider
+     */
+    public function testContainsAll($coll1, $coll2)
+    {
+        $this->assertTrue($coll1->containsAll($coll2));
+        $this->assertTrue($coll2->containsAll(array(1, 2, 3)));
+    }
+
+    /**
+     * @dataProvider rangeCollectionsProvider
+     */
+    public function testRandom($coll1, $coll2)
+    {
+        $random = $coll2->random();
+        $this->assertTrue($coll2->contains($random));
+
+        $random = $coll2->random(3);
+        $this->assertTrue($coll2->containsAll($random));
+    }
+
 
     public function rangeCollectionsProvider()
     {
