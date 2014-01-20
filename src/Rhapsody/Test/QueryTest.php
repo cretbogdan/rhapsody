@@ -46,7 +46,7 @@ class QueryTest extends RhapsodyTestCase
     public function testNotNull()
     {
         $authors = Rhapsody::query('Author')->filterByName(null, 'not null')->find();
-        $this->assertContains('SELECT author.* FROM author author WHERE name  IS NOT NULL', Rhapsody::getLastExecutedQuery()['sql']);
+        $this->assertContains('SELECT author.* FROM author author WHERE author.name  IS NOT NULL', Rhapsody::getLastExecutedQuery()['sql']);
     }
 
     public function testVirtualColumns()

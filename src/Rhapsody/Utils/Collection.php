@@ -33,6 +33,16 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return reset($this->elements);
     }
 
+    public function getSecond()
+    {
+        return $this->second();
+    }
+
+    public function second()
+    {
+        return $this->get(1);
+    }
+
     public function getLast()
     {
         return $this->last();
@@ -308,24 +318,62 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $result;
     }
 
-    public function sum($attribute)
+    public function toAttributeValues(array $attributes)
     {
-        return array_sum($this->toAttributeValue($attribute));
+        $result = array();
+        foreach ($this->elements as $element) {
+             $row = array();
+             foreach ($attributes as $attribute) {
+                $row[$attribute] = static::getElementValue($element, $attribute);
+             }
+
+             $result[] = $row;
+        }
+
+        return $result;
     }
 
-    public function product($attribute)
+    public function sum($attribute = null)
     {
-        return array_product($this->toAttributeValue($attribute));
+        $toSum = $attribute ? $this->toAttributeValue($attribute) : $this->elements;
+
+        return array_sum($toSum);
+    }
+
+    public function product($attribute = null)
+    {
+        return $this->prod($attribute);
+    }
+
+    public function prod($attribute = null)
+    {
+        $toProd = $attribute ? $this->toAttributeValue($attribute) : $this->elements;
+
+        return array_product($toProd);
     }
 
     public function pad($size, $value)
     {
-        return array_pad($this->element, $size, $value);
+        $padded = new static();
+
+        foreach ($this->elements as $element) {
+            $padded->add(array_pad($element, $size, $value));
+        }
+
+        return $padded;
     }
 
-    public function chunk($size)
+    /**
+     * Chunk into several collections
+     *
+     * @param  int     $size
+     * @param  boolean $preserveKeys
+     *
+     * @return Collection
+     */
+    public function chunk($size, $preserveKeys = false)
     {
-        $chunks = array_chunk($this->elements, $size);
+        $chunks = array_chunk($this->elements, $size, $preserveKeys);
         $collections = new static();
 
         foreach ($chunks as $chunk) {
@@ -376,10 +424,10 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array_reduce($this->elements, $callback);
     }
 
-    public function getAttributeFilterClosure($name, $value)
+    public function getAttributeFilterClosure($attribute, $value)
     {
-        $callback = function ($element) use ($name, $value) {
-            $elementValue = static::getElementValue();
+        $callback = function ($element) use ($attribute, $value) {
+            $elementValue = static::getElementValue($element, $attribute);
 
             return $elementValue == $value;
         };
