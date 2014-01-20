@@ -259,6 +259,12 @@ class Query
      */
     public function groupBy($groupBy)
     {
+        $tableizedColumn = Inflector::tableize($groupBy);
+
+        if (Rhapsody::getTableManager()->hasColumn($this->table, $tableizedColumn)) {
+            $groupBy = $tableizedColumn;
+        }
+
         $this->queryBuilder->addGroupBy($groupBy);
 
         return $this;

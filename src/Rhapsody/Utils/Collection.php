@@ -188,6 +188,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
     public function indexOf($element)
     {
+        return $this->search($element);
+    }
+
+    public function search($element)
+    {
         return array_search($element, $this->elements, true);
     }
 
@@ -196,6 +201,7 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         if (isset($this->elements[$key])) {
             return $this->elements[$key];
         }
+
         return null;
     }
 
@@ -284,6 +290,51 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this->filter($callback);
     }
 
+    /**
+     * Return array with all the attribute values for each element
+     *
+     * @param  string $attribute
+     *
+     * @return array
+     */
+    public function toAttributeValue($attribute)
+    {
+        $result = array();
+
+        foreach ($this->elements as $element) {
+            $result[] = static::getElementValue($element, $attribute);
+        }
+
+        return $result;
+    }
+
+    public function sum($attribute)
+    {
+        return array_sum($this->toAttributeValue($attribute));
+    }
+
+    public function product($attribute)
+    {
+        return array_product($this->toAttributeValue($attribute));
+    }
+
+    public function pad($size, $value)
+    {
+        return array_pad($this->element, $size, $value);
+    }
+
+    public function chunk($size)
+    {
+        $chunks = array_chunk($this->elements, $size);
+        $collections = new static();
+
+        foreach ($chunks as $chunk) {
+            $collections->add(new static($chunk));
+        }
+
+        return $collections;
+    }
+
     public function each(Closure $callback)
     {
         return $this->walk($callback);
@@ -328,26 +379,39 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     public function getAttributeFilterClosure($name, $value)
     {
         $callback = function ($element) use ($name, $value) {
-            if (is_array($element)) {
-                $valid = $element[$name] == $value;
-            } elseif (is_object($element)) {
-                $method = 'get'.ucfirst($name);
+            $elementValue = static::getElementValue();
 
-                if (is_callable(array($element, $method))) {
-                    $valid = $element->$method() == $value;
-                } elseif (is_callable(array($element, $name))) {
-                    $valid = $element->$name() == $value;
-                }
-            }
-
-            if (! isset($valid)) {
-                throw new \InvalidArgumentException("Cannot access \"$name\" for element of current collection!");
-            }
-
-            return $valid;
+            return $elementValue == $value;
         };
 
         return $callback;
+    }
+
+    public static function getElementValue($element, $attribute)
+    {
+        $valid = false;
+        $value = null;
+
+        if (is_array($element)) {
+            $valid = true;
+            $value = $element[$attribute];
+        } elseif (is_object($element)) {
+            $method = 'get'.ucfirst($attribute);
+
+            if (is_callable(array($element, $method))) {
+                $valid = true;
+                $value = $element->$method();
+            } elseif (is_callable(array($element, $attribute))) {
+                $valid = true;
+                $value = $element->$attribute();
+            }
+        }
+
+        if (! $valid) {
+            throw new \InvalidArgumentException("Cannot get value \"$attribute\" for element!");
+        }
+
+        return $value;
     }
 
     public function copy()
