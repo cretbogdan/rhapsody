@@ -152,9 +152,29 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this->removeByKey($offset);
     }
 
+    public function hasKey($key)
+    {
+        return $this->containsKey($key);
+    }
+
     public function containsKey($key)
     {
         return isset($this->elements[$key]);
+    }
+
+    public function has($element)
+    {
+        return $this->contains($element);
+    }
+
+    public function contains($element)
+    {
+        return in_array($element, $this->elements);
+    }
+
+    public function hasAll($elements)
+    {
+        return $this->containsAll($elements);
     }
 
     public function containsAll($elements)
@@ -172,16 +192,6 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
 
         return true;
-    }
-
-    public function contains($element)
-    {
-        return in_array($element, $this->elements);
-    }
-
-    public function has($element)
-    {
-        return $this->contains($element);
     }
 
     public function exists(Closure $callback)
@@ -388,7 +398,16 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     public function rand($num = 1)
     {
         $random = array_rand($this->elements, $num);
-        $result = 1 === $num ? $this->get($random) : new static($random);
+        if (1 === $num) {
+            $result = $this->get($random);;
+        } else {
+            $elements = array();
+            foreach ($random as $key) {
+                $elements[] = $this->get($key);
+            }
+
+            $result = new static($elements);
+        }
 
         return $result;
     }
