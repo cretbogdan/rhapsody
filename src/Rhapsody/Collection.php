@@ -59,16 +59,10 @@ class Collection extends BaseCollection
             $columns = array($columns);
         }
 
-        foreach ($columns as $column) {
-            if (! Rhapsody::getTableManager()->hasColumn($this->getTable(), $column) && ! in_array($column, $this->virtualColumns)) {
-                throw new \InvalidArgumentException("Table '$this->table' does not have column '$column'!");
-            }
-        }
-
         $result = array();
         foreach ($this->getObjects() as $object) {
             if (1 == count($columns)) {
-                $result[] = $object->get($column);
+                $result[] = $object->get($columns[0]);
             } else {
                 $row = array();
                 foreach ($columns as $column) {

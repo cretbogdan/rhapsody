@@ -18,6 +18,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         $this->elements = $elements;
     }
 
+    public function setElements(array $elements)
+    {
+        $this->elements = $elements;
+    }
+
     public function getElements()
     {
         return $this->elements;
@@ -129,7 +134,21 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this->shift();
     }
 
-    public function offsetExists($offset)
+    public function copy()
+    {
+        $clone = clone $this;
+
+        return $clone;
+    }
+
+    public function shuffle()
+    {
+        shuffle($this->elements);
+
+        return $this;
+    }
+
+     public function offsetExists($offset)
     {
         return $this->containsKey($offset);
     }
@@ -216,9 +235,14 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return null;
     }
 
-    public function findByAttribute($name, $value)
+    public function findBy($attribute, $value)
     {
-        $callback = $this->getAttributeFilterClosure($name, $value);
+        return $this->findByAttribute($attribute, $value);
+    }
+
+    public function findByAttribute($attribute, $value)
+    {
+        $callback = $this->getAttributeFilterClosure($attribute, $value);
 
         return $this->find($callback);
     }
@@ -245,13 +269,6 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     public function getKeys()
     {
         return array_keys($this->elements);
-    }
-
-    public function resetKeys()
-    {
-        $this->elements = array_values($this->elements);
-
-        return $this;
     }
 
     public function getValues()
@@ -323,6 +340,20 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     public function filterByAttribute($name, $value)
     {
         $callback = $this->getAttributeFilterClosure($name, $value);
+
+        return $this->filter($callback);
+    }
+
+    public function filterBy($name, $value)
+    {
+        return $this->filterByAttribute($name, $value);
+    }
+
+    public function diff(Collection $collection)
+    {
+        $callback = function ($element) use ($collection) {
+            return ! $collection->contains($element);
+        };
 
         return $this->filter($callback);
     }
@@ -444,6 +475,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this;
     }
 
+    public function reduce(Closure $callback)
+    {
+        return array_reduce($this->elements, $callback);
+    }
+
     public function partition(Closure $callback)
     {
         $coll1 = array();
@@ -459,18 +495,107 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array(new static($coll1), new static($coll2));
     }
 
-    public function diff(Collection $collection)
+    public function merge($elements)
     {
-        $callback = function ($element) use ($collection) {
-            return ! $collection->contains($element);
-        };
+        $elements = $this->elementsToArray($elements);
+        $this->elements = array_merge($this->elements, $elements);
 
-        return $this->filter($callback);
+        return $this;
     }
 
-    public function reduce(Closure $callback)
+    public function order(Closure $callback)
     {
-        return array_reduce($this->elements, $callback);
+        return $this->sort($callback);
+    }
+
+    public function sort(Closure $callback)
+    {
+        uasort($this->elements, $callback);
+
+        return $this;
+    }
+
+    public function orderByAttribute($attribute = null, $type = 'asc')
+    {
+        return $this->sortByAttribute($attribute, $type);
+    }
+
+    public function orderBy($attribute = null, $type = 'asc')
+    {
+        return $this->sortByAttribute($attribute, $type);
+    }
+
+    public function sortBy($attribute = null, $type = 'asc')
+    {
+        return $this->sortByAttribute($attribute, $type);
+    }
+
+    public function sortByAttribute($attribute = null, $type = 'asc')
+    {
+        $type = strtolower($type);
+        if(! in_array($type, array('asc', 'desc'))) {
+            throw new \InvalidArgumentException("Unknown sort type \"$type\". Valid types: asc, desc!");
+        }
+
+        if ($attribute) {
+            $callback = function ($element1, $element2) use ($attribute, $type) {
+                $val1 = static::getElementValue($element1, $attribute);
+                $val2 = static::getElementValue($element2, $attribute);
+
+                return 'asc' == $type ? strcmp($val1, $val2) : strcmp($val2, $val1);
+            };
+
+            $this->sort($callback);
+        } else {
+            'asc' == $type ? asort($this->elements) : arsort($this->elements);
+
+            return $this;
+        }
+    }
+
+    public function replace($elements)
+    {
+        $elements = $this->elementsToArray($elements);
+        $this->elements = array_replace($this->elements, $elements);
+
+        return $this;
+    }
+
+    public function clear()
+    {
+        $this->elements = array();
+
+        return $this;
+    }
+
+    public function resetKeys()
+    {
+        $this->elements = array_values($this->elements);
+
+        return $this;
+    }
+
+    public function rewind()
+    {
+        return $this->reset();
+    }
+
+    public function reset()
+    {
+        reset($this->elements);
+
+        return $this;
+    }
+
+    protected function elementsToArray($elements)
+    {
+        if ($elements instanceof Collection) {
+            $elements = $elements->getElements();
+        } elseif (! is_array($elements)) {
+            throw new \InvalidArgumentException("Can only merge with array or instance of Rhapsody\Utils\Collection!");
+        }
+
+        return $elements;
     }
 
     public function getAttributeFilterClosure($attribute, $value)
@@ -509,27 +634,6 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
 
         return $value;
-    }
-
-    public function copy()
-    {
-        $clone = clone $this;
-
-        return $clone;
-    }
-
-    public function shuffle()
-    {
-        shuffle($this->elements);
-
-        return $this;
-    }
-
-    public function clear()
-    {
-        $this->elements = array();
-
-        return $this;
     }
 
     public function __toString()

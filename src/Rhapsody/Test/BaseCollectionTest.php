@@ -74,6 +74,36 @@ class BaseCollectionTest extends RhapsodyTestCase
         $this->assertEquals(array(2, 4, 6, 8, 10), $doubled->getValues());
     }
 
+    public function testMapWithKey()
+    {
+        $coll = new Collection();
+        $coll->set('names', array('John', 'Mairie'));
+        $coll->set('movies', array('Titanic', 'Alexander'));
+
+        $func = function($attribute){return $attribute[0];};
+        $mapped = $coll->map($func);
+
+        $this->assertEquals(array('names' => 'John', 'movies' => 'Titanic'), $mapped->getElements());
+    }
+
+    /**
+     * @dataProvider peopleCollectionProvider
+     */
+    public function testSort($people)
+    {
+        $people->sortByAttribute('name');
+        $names = $people->toAttributeValue('name');
+
+        $expected = array('George', 'Jane', 'John', 'Mairie', 'Michael', 'Simone');
+        $this->assertEquals($expected, $names);
+
+        $people->sortByAttribute('name', 'desc');
+        $names = $people->toAttributeValue('name');
+
+        $expected = array_reverse($expected);
+        $this->assertEquals($expected, $names);
+    }
+
     /**
      * @dataProvider rangeCollectionsProvider
      */
