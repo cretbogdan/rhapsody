@@ -9,11 +9,6 @@ class BaseCollectionTest extends RhapsodyTestCase
 {
     public function testAddRemove()
     {
-$memory = memory_get_usage(true);
-$emptyColl = new Collection();
-var_dump((memory_get_usage(true) - $memory) / 1024);
-exit;
-
         $coll = new Collection(range(1, 3));
         $coll->prepend(0);
         $this->assertEquals(range(0, 3), $coll->getElements());
