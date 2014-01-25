@@ -317,6 +317,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return new ArrayIterator($this->elements);
     }
 
+    public function unique()
+    {
+        return new static(array_unique($this->elements));
+    }
+
     public function slice($offset, $length = null)
     {
         return new static(array_slice($this->elements, $offset, $length, true));
@@ -498,9 +503,8 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     public function merge($elements)
     {
         $elements = $this->elementsToArray($elements);
-        $this->elements = array_merge($this->elements, $elements);
 
-        return $this;
+        return new static(array_merge($this->elements, $elements));
     }
 
     public function order(Closure $callback)

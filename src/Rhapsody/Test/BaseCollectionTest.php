@@ -86,6 +86,25 @@ class BaseCollectionTest extends RhapsodyTestCase
         $this->assertEquals(array('names' => 'John', 'movies' => 'Titanic'), $mapped->getElements());
     }
 
+    public function testMerge()
+    {
+        $coll1 = new Collection(range(1,3));
+        $coll2 = new Collection(range(4,5));
+
+        $merged = $coll1->merge($coll2);
+        $this->assertEquals(range(1,5), $merged->getElements());
+    }
+
+    public function testUnique()
+    {
+        $coll = new Collection(array(1,2,3,4,4,4,3,5));
+        $unique = $coll->unique();
+
+        $this->assertEquals(5, $unique->count());
+        $unique->resetKeys();
+        $this->assertEquals(range(1, 5), $unique->getElements());
+    }
+
     /**
      * @dataProvider peopleCollectionProvider
      */
