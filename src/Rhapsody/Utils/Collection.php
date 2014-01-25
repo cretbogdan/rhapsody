@@ -288,6 +288,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this;
     }
 
+    public function push($value)
+    {
+        return $this->add($value);
+    }
+
     public function add($value)
     {
         $this->elements[] = $value;
