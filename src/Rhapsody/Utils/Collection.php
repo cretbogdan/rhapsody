@@ -363,6 +363,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this->filter($callback);
     }
 
+    public function toValue($attribute)
+    {
+        return $this->toAttributeValue($attribute);
+    }
+
     /**
      * Return array with all the attribute values for each element
      *
@@ -379,6 +384,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
 
         return $result;
+    }
+
+    public function toValues(array $attributes)
+    {
+        return $this->toAttributeValues($attributes);
     }
 
     public function toAttributeValues(array $attributes)
