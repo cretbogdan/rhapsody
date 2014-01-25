@@ -10,16 +10,11 @@ class Collection extends BaseCollection
     private $table;
     private $virtualColumns = array();
 
-    public function __construct($table = null, array $elements = array())
+    public static function create($table, array $elements = array())
     {
-        $this->table = $table;
-        parent::__construct($elements);
-    }
-
-    public static function create($table, array $elements = array(), $isNew = true)
-    {
-        $collection = new static($table);
-        $collection->fromArray($elements, $isNew);
+        $collection = new static();
+        $collection->setTable($table);
+        $collection->fromArray($elements);
 
         return $collection;
     }

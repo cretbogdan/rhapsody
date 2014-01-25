@@ -435,7 +435,7 @@ class Query
             $rows = $stmt->fetchAll();
         }
 
-        $collection = new Collection($this->table);
+        $collection = Rhapsody::createCollection($this->table);
         $collection->addVirtualColumns(array_keys($this->virtualColumns));
         $collection->fromArray($rows);
 

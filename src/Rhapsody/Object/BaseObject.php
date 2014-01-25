@@ -13,13 +13,12 @@ class BaseObject
     protected $virtualColumnData = array();
     protected $toDelete = array(); // to delete objects on save
     protected $toSave = array(); // to delete objects on save
-    protected $isNew = true;
     protected $isModified = false;
     protected $virtualColumns = array();
 
     public $table;
 
-    public function __construct($table = null, array $columnData = array(), $isNew = true)
+    public function __construct($table = null, array $columnData = array())
     {
         if ($table) {
             $this->table = $table;
@@ -27,8 +26,6 @@ class BaseObject
 
         $this->setDefaultValues();
         $this->fromArray($columnData);
-
-        $this->isNew = $isNew;
     }
 
     public function addVirtualColumns(array $columns)
@@ -60,9 +57,7 @@ class BaseObject
         }
 
         $this->toSave = array();
-
         $this->isModified = false;
-        $this->isNew = false;
 
         return $this;
     }
