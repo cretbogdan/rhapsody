@@ -276,6 +276,24 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array_values($this->elements);
     }
 
+    public function max(Closure $callback = null)
+    {
+        if ($callback) {
+            return $this->map($callback)->max();
+        }
+
+        return max($this->elements);
+    }
+
+    public function maxAttribute($attribute)
+    {
+        $callback = function($element) use ($attribute) {
+            return static::getElementValue($element, $attribute);
+        };
+
+        return $this->max($callback);
+    }
+
     public function count()
     {
         return count($this->elements);
@@ -292,6 +310,30 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
     {
         foreach (func_get_args() as $value) {
             $this->add($value);
+        }
+
+        return $this;
+    }
+
+    public function addAll($values)
+    {
+        foreach ($values as $value) {
+            $this->add($value);
+        }
+
+        return $this;
+    }
+
+    public function addUnique($values)
+    {
+        if (! (is_array($values) || $values instanceof Collection)) {
+            $values = array($values);
+        }
+
+        foreach ($values as $value) {
+            if (! $this->contains($value)) {
+                $this->add($value);
+            }
         }
 
         return $this;

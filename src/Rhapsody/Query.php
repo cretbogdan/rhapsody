@@ -300,7 +300,7 @@ class Query
         $filter = new ColumnFilter($column, $value, $comparison);
         $this->filters->add($filter);
 
-        $value = $filter->getValue() ? "(".$this->queryBuilder->createNamedParameter($filter->getValue()).")" : '';
+        $value = $filter->getValue() !== '' ? "(".$this->queryBuilder->createNamedParameter($filter->getValue()).")" : "''";
         $this->queryBuilder->andWhere($this->alias.'.'.$filter->getColumn()." ".$filter->getComparison()." ".$value);
 
         return $this;
