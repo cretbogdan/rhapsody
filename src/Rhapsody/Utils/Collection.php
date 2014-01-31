@@ -7,25 +7,42 @@ use ArrayIterator;
 use Countable;
 use IteratorAggregate;
 use ArrayAccess;
-use Doctrine\Common\Util\Inflector;
 
 class Collection implements Countable, IteratorAggregate, ArrayAccess
 {
     protected $elements;
+    protected $metas = [];
 
-    public function __construct(array $elements = array())
+    public function __construct($elements = array())
     {
-        $this->elements = $elements;
+        $this->setElements($elements);
+    }
+
+    public static function create($elements = array())
+    {
+        return new static($elements);
     }
 
     public function setElements(array $elements)
     {
-        $this->elements = $elements;
+        $this->elements = $this->elementsToArray($elements);
     }
 
     public function getElements()
     {
         return $this->elements;
+    }
+
+    public function setMeta($name, $value)
+    {
+        $this->metas[$name] = $value;
+
+        return $this;
+    }
+
+    public function getMeta($name, $default = null)
+    {
+        return isset($this->metas[$name]) ? $this->metas[$name] : $default;
     }
 
     public function getFirst()
@@ -171,6 +188,11 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this->removeByKey($offset);
     }
 
+    public function keyExists($key)
+    {
+        return array_key_exists($key, $this->elements);
+    }
+
     public function hasKey($key)
     {
         return $this->containsKey($key);
@@ -257,13 +279,13 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array_search($element, $this->elements, true);
     }
 
-    public function get($key)
+    public function get($key, $default = null)
     {
         if (isset($this->elements[$key])) {
             return $this->elements[$key];
         }
 
-        return null;
+        return $default;
     }
 
     public function getKeys()
@@ -276,22 +298,18 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return array_values($this->elements);
     }
 
-    public function max(Closure $callback = null)
+    public function max($attribute = null)
     {
-        if ($callback) {
-            return $this->map($callback)->max();
-        }
+        $values = $attribute ? $this->toValue($attribute) : $this->elements;
 
-        return max($this->elements);
+        return max($values);
     }
 
-    public function maxAttribute($attribute)
+    public function min($attribute = null)
     {
-        $callback = function($element) use ($attribute) {
-            return static::getElementValue($element, $attribute);
-        };
+        $values = $attribute ? $this->toValue($attribute) : $this->elements;
 
-        return $this->max($callback);
+        return min($values);
     }
 
     public function count()
@@ -305,6 +323,16 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
 
         return $this;
     }
+
+    public function setAttribute($attribute, $value)
+    {
+        foreach ($this->elements as $element) {
+            static::setElementValue($attribute, $value, $element);
+        }
+
+        return $this;
+    }
+
 
     public function push($value)
     {
@@ -412,6 +440,20 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         };
 
         return $this->filter($callback);
+    }
+
+    public function toKeyValue($keyAttribute, $valueAttribute)
+    {
+        $result = [];
+
+        foreach ($this->elements as $element) {
+            $key = static::getElementValue($element, $keyAttribute);
+            $value = static::getElementValue($element, $valueAttribute);
+
+            $result[$key] = $value;
+        }
+
+        return $result;
     }
 
     public function toValue($attribute)
@@ -580,12 +622,12 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this;
     }
 
-    public function orderByAttribute($attribute = null, $type = 'asc')
+    public function orderBy($attribute = null, $type = 'asc')
     {
         return $this->sortByAttribute($attribute, $type);
     }
 
-    public function orderBy($attribute = null, $type = 'asc')
+    public function orderByAttribute($attribute = null, $type = 'asc')
     {
         return $this->sortByAttribute($attribute, $type);
     }
@@ -691,6 +733,9 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
             } elseif (is_callable(array($element, $attribute))) {
                 $valid = true;
                 $value = $element->$attribute();
+            } elseif (method_exists($element, 'get')) {
+                $valid = true;
+                $value = $element->get($attribute);
             }
         }
 
@@ -699,6 +744,31 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
 
         return $value;
+    }
+
+    public static function setElementValue($attribute, $value, $element)
+    {
+        if (is_array($element)) {
+            $valid = true;
+            $element[$attribute] = $value;;
+        } elseif (is_object($element)) {
+            $method = 'set'.ucfirst($attribute);
+
+            if (is_callable(array($element, $method))) {
+                $valid = true;
+                $element->$method($value);
+            } elseif (is_callable(array($element, $attribute))) {
+                $valid = true;
+                $element->$attribute($value);
+            } elseif (method_exists($element, 'set')) {
+                $valid = true;
+                $element->set($attribute, $value);
+            }
+        }
+
+        if (! $valid) {
+            throw new \InvalidArgumentException("Cannot get value \"$attribute\" for element!");
+        }
     }
 
     public function __toString()
@@ -720,4 +790,3 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         throw new \BadMethodCallException("Method Rhapsody\Utils\Collection::$name does not exist!");
     }
 }
-

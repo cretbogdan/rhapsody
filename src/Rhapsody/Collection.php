@@ -10,10 +10,9 @@ class Collection extends BaseCollection
     private $table;
     private $virtualColumns = array();
 
-    public static function create($table, array $elements = array())
+    public static function create($elements = array())
     {
         $collection = new static();
-        $collection->setTable($table);
         $collection->fromArray($elements);
 
         return $collection;
@@ -83,6 +82,8 @@ class Collection extends BaseCollection
     public function fromArray(array $rows)
     {
         $this->clear();
+        $rows = $this->elementsToArray($rows);
+
         $cache = Rhapsody::getObjectCache();
 
         foreach ($rows as $row) {

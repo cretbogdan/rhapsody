@@ -139,7 +139,10 @@ class Rhapsody
     {
         $table = Inflector::tableize($table);
 
-        return Collection::create($table, $rows, $isNew);
+        $collection = Collection::create($rows);
+        $collection->setTable($table);
+
+        return $collection;
     }
 
     /**
