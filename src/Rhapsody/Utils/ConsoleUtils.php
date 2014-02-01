@@ -48,28 +48,25 @@ class ConsoleUtils
      * @param  Console\Application $console
      * @param  string              $commandsDirectory   Absolute path
      */
-    public static function registerCommands(Console\Application $console, $commandsDirectory)
+    public static function registerCommands(Console\Application $console, $commandsDirectory, array $notNames = array(), array $names = array('*Command.php'))
     {
-        $directoryInfo = new \SplFileInfo($commandsDirectory);
-
-        if (! $directoryInfo->isDir()) {
+        if (! is_dir($commandsDirectory)) {
             throw new \InvalidArgumentException("$commandsDirectory is not a directory!");
         }
 
-        $namespace = $directoryInfo->getFilename();
+        $finder = \Symfony\Component\Finder\Finder::create()->files()->in($commandsDirectory);
 
-        $filesystem = new \Symfony\Component\Filesystem\Filesystem();
+        foreach ($names as $name) {
+            $finder->name($name);
+        }
 
-        $finder = \Symfony\Component\Finder\Finder::create()
-            ->files()
-            ->in($commandsDirectory)
-            ->name('*Command.php');
+        foreach ($notNames as $name) {
+            $finder->notName($name);
+        }
 
         foreach ($finder as $file) {
-            $command = '/'.$filesystem->makePathRelative($file->getRealPath(), $commandsDirectory);
-            $command = preg_replace("/(.*)$namespace(.*)/i", "\\$namespace$2", $command);
-            $command = str_replace('.php/', '', $command);
-            $command = str_replace('/', '\\', $command);
+            $namespace = self::findNamespace($file->getRealPath());
+            $command = $namespace."\\".rtrim($file->getFilename(), ".php");
 
             if (class_exists($command)) {
                 $console->add(new $command());
@@ -77,6 +74,26 @@ class ConsoleUtils
                 ConsoleUtils::writeln("Command class \"$command\" does not exist!");
             }
         }
+    }
+
+    public static function findNamespace($filepath)
+    {
+        $namespace = '';
+        $file = new \SplFileObject($filepath);
+
+        do {
+            $continue = true;
+            $line = $file->fgets();
+
+            if (stripos($line, 'namespace') !== false) {
+                $namespace = preg_replace('/^(.*)namespace (.*);(.*)$/i', '$2', $line);
+                $namespace = trim($namespace);
+                $continue = false;
+            }
+
+        } while ($continue);
+
+        return $namespace;
     }
 }
 
