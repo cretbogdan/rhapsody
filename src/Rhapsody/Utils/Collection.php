@@ -10,8 +10,8 @@ use ArrayAccess;
 
 class Collection implements Countable, IteratorAggregate, ArrayAccess
 {
-    protected $elements;
     protected $metas = [];
+    protected $elements;
 
     public function __construct($elements = array())
     {
@@ -352,16 +352,22 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         return $this;
     }
 
-    public function addUnique($values)
+
+    public function addUniques($values)
     {
-        if (! (is_array($values) || $values instanceof Collection)) {
-            $values = array($values);
-        }
+        $values = $this->elementsToArray($values);
 
         foreach ($values as $value) {
-            if (! $this->contains($value)) {
-                $this->add($value);
-            }
+            $this->addUnique($value);
+        }
+
+        return $this;
+    }
+
+    public function addUnique($value)
+    {
+        if (! $this->contains($value)) {
+            $this->add($value);
         }
 
         return $this;
@@ -497,6 +503,18 @@ class Collection implements Countable, IteratorAggregate, ArrayAccess
         }
 
         return $result;
+    }
+
+    public function join($glue, $attribute = null)
+    {
+        return $this->implode($glue, $attribute);
+    }
+
+    public function implode($glue, $attribute = null)
+    {
+        $elements = $attribute ? $this->toValue($attribute) : $this->elements;
+
+        return implode($glue, $elements);
     }
 
     public function sum($attribute = null)
